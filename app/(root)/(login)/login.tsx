@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -94,6 +95,10 @@ export default function Login() {
   };
 
   return (
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
     <View className="flex h-full w-full">
       <View className="relative w-full">
         <Image
@@ -214,5 +219,7 @@ export default function Login() {
         </View>
       </View>
     </View>
+    </ScrollView>
+  </KeyboardAvoidingView>
   );
 }

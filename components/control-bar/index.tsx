@@ -41,6 +41,7 @@ export const ControlBar = () => {
 
     if (!robotStatus.isWorking) {
       sendCmdDispatch(Command.BeginAutoMode);
+      console.log('发送开始自动模式指令');
     } else {
       sendCmdDispatch(Command.manualModel);
       setRobotStatus({
@@ -74,7 +75,7 @@ export const ControlBar = () => {
             </Text>
           </View>
           <ControlSegmented/>
-          <View className="min-h-[250px]">{renderControl()}</View>
+          <View className="min-h-[200px]">{renderControl()}</View>
         </View>
         {robotStatus.currentMode !== ROBOT_CURRENT_MODE.LOCKED ? <ControlExtraModule /> : null}
       </View>

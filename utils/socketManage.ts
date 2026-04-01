@@ -174,7 +174,7 @@ export class SocketManage {
   onData(event: string) {
     try {
       const eventData = event;
-      console.log(`>>> [SOCKET_RAW] 收到原始数据: ${eventData}`);
+      //console.log(`>>> [SOCKET_RAW] 收到原始数据: ${eventData}`);
       // 如果消息包含 'up'，表示机器人还活着，处理心跳响应
       if (eventData.includes('up')) {
         this.handleHeartbeatResponse();

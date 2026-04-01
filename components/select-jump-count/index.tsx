@@ -58,6 +58,8 @@ export const SelectJumpCount = () => {
     const socket = SocketManage.getInstance();
 
     if (socket.isConnected()) {
+      const command = `${GlobalConst.forwardData}:${fClass}=${fData}`;
+      console.log('选择的跳扎数:', command); // 打印发送的命令
       sendCmdWithRepeat(() => {
         socket.writeData(`${GlobalConst.forwardData}:${fClass}=${fData}`);
       }, 2);
@@ -73,7 +75,7 @@ export const SelectJumpCount = () => {
   };
 
   return (
-    <View className="flex flex-col items-start justify-center">
+    <View className="flex flex-col items-start justify-center" style={{ marginTop: -20 }}>
       <Text className="text-center text-lg font-bold">{t('common.currentSkipBindingCount')}</Text>
       <View className="flex flex-row items-center gap-x-5">
         {jumpCountList.map((item) => (

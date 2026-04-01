@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { DefaultTheme, PaperProvider } from 'react-native-paper';
+import { ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 
 import GlobalActivityIndicatorComponent from '@/components/activity-indicator-global';
 import { Bootstrap } from '@/components/bootstrap';

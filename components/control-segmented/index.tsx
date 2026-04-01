@@ -173,6 +173,7 @@ export const ControlSegmented = () => {
                   );
             } else if (value === ROBOT_WORK_MODE.SKIP_BINDING) {
               sendCmdDispatch(Command.jumpLashed);
+              console.log('进入跳绑模式');
             }
           }}
           buttons={[

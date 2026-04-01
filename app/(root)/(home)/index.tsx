@@ -1,4 +1,4 @@
-import { Dimensions, View } from 'react-native';
+import { ScrollView,KeyboardAvoidingView,Platform, Dimensions, View } from 'react-native';
 
 import { ControlBar } from '@/components/control-bar';
 import { DangerousStatus } from '@/components/dangerous-status';
@@ -16,12 +16,16 @@ const Home = () => {
   const headerHeight = 100;
 
   return (
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView horizontal={true} contentContainerStyle={{ flexGrow: 1 }}>
     <View className="flex w-full">
       <Header />
       {robotStatus.robotDangerStatus ? <DangerousStatus /> : null}
       {robotStatus.robotLockedStatus ? <LockedStatus /> : null}
       <View
-        style={{ height: height - headerHeight }}
         className="flex w-full flex-row justify-center px-6 py-5">
         <View className="w-[37%]">
           <View className="relative mx-auto flex w-[95%] flex-col justify-center gap-y-4">
@@ -39,6 +43,9 @@ const Home = () => {
         </View>
       </View>
     </View>
+    </ScrollView>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
