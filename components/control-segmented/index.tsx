@@ -7,17 +7,20 @@ import useStore from '@/store';
 import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
 import eventBus from '@/utils/eventBus';
 import { sendCmdDispatch, sendCmdWithRepeat } from '@/utils/helper';
-
+import { useEffect } from 'react';
 // 控制分段按钮组件 - 切换工作模式
 export const ControlSegmented = () => {
   //全局状态库中获取机器人状态
   const { robotStatus, setRobotStatus } = useStore((state) => state);
   const { t } = useTranslation();
-  // 发送指令函数 - 根据工作模式发送不同指令
+  //4.17新增：监听机器人当前模式的变化，打印日志
+
+  //console.log('[ControlSegmented] robotStatus.currentMode ->', robotStatus.currentMode);
+
   const sendCmd = (mode: ROBOT_CURRENT_MODE) => {
     // 如果当前工作模式与目标模式相同，不发送指令
-   // if (robotStatus.currentMode === mode) {
-   //   return;
+    // if (robotStatus.currentMode === mode) {
+    //   return;
     //}
     // 如果切换到锁止模式 - 重复发送2次，间隔30ms，确保锁止生效
     if (mode === ROBOT_CURRENT_MODE.LOCKED) {
@@ -165,12 +168,12 @@ export const ControlSegmented = () => {
               sendCmdDispatch(Command.noLashed);
             } else if (value === ROBOT_WORK_MODE.FULL_BINDING) {
               sendCmdWithRepeat(
-                    () => {
-                      sendCmdDispatch(Command.allLashed);
-                    },
-                    2,
-                    10
-                  );
+                () => {
+                  sendCmdDispatch(Command.allLashed);
+                },
+                2,
+                10
+              );
             } else if (value === ROBOT_WORK_MODE.SKIP_BINDING) {
               sendCmdDispatch(Command.jumpLashed);
               console.log('进入跳绑模式');

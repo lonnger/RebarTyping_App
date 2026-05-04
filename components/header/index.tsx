@@ -84,10 +84,13 @@ export const Header = () => {
   };
 
   // 获取缓存的WiFi数据
-  const getCachedWifiData = (): WifiEntry[] | null => {
+  const getCachedWifiData = (ignoreAge: boolean = false): WifiEntry[] | null => {
     if (!wifiCache) return null;
 
     const { data, timestamp, source } = wifiCache;
+
+    if (ignoreAge) return data;
+
     let maxAge = CACHE_CONFIG.SYSTEM_CACHE_DURATION;
 
     // 根据数据源设置不同的缓存时间
@@ -210,7 +213,7 @@ export const Header = () => {
               message: t('wifi.notRobotWifi'),
               type: 'info',
               duration: 3000,
-              onPress: () => {},
+              onPress: () => { },
             });
           }
         }
@@ -259,7 +262,7 @@ export const Header = () => {
       message: t('wifi.reconnectWifi'),
       type: 'error',
       duration: 3000,
-      onPress: () => {},
+      onPress: () => { },
     });
 
     // 如果有之前连接的WiFi，记录日志
@@ -304,7 +307,7 @@ export const Header = () => {
         title: `${t('wifi.autoReconnect')} ${ssid} ${t('common.success')}`,
         type: 'success',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
 
       // 重新连接socket
@@ -318,7 +321,7 @@ export const Header = () => {
         title: `${t('wifi.autoReconnect')} ${ssid} ${t('common.failed')}`,
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
     }
   };
@@ -357,7 +360,7 @@ export const Header = () => {
           title: t('wifi.needWifiPermission'),
           type: 'error',
           duration: 3000,
-          onPress: () => {},
+          onPress: () => { },
         });
         return;
       }
@@ -372,7 +375,7 @@ export const Header = () => {
         title: t('wifi.openWifiSettingFailed'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
     }
   };
@@ -410,7 +413,7 @@ export const Header = () => {
   // 智能WiFi扫描策略 - 使用可配置缓存
   const handleRefreshWifiList = async (type: 'auto' | 'manual' = 'auto') => {
     if (type === 'manual') {
-      GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 1000);
+      GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 1500);
     }
 
     let loadWifiList: WifiEntry[] = [];
@@ -424,24 +427,42 @@ export const Header = () => {
         } else {
           // 缓存无效，获取系统缓存
           loadWifiList = await WifiManager.loadWifiList();
-          updateWifiCache(loadWifiList, 'system');
+          if (loadWifiList && loadWifiList.length > 0) {
+            updateWifiCache(loadWifiList, 'system');
+          }
         }
       } else {
         // 手动模式：尝试强制扫描，失败则使用最佳缓存
         try {
           loadWifiList = await WifiManager.reScanAndLoadWifiList();
-          updateWifiCache(loadWifiList, 'force');
+
+          if (loadWifiList && loadWifiList.length > 0) {
+            updateWifiCache(loadWifiList, 'force');
+          } else {
+            console.log('强制扫描返回空列表，可能被系统节流，尝试使用缓存数据');
+            const cachedData = getCachedWifiData(true);
+            if (cachedData && cachedData.length > 0) {
+              loadWifiList = cachedData;
+            } else {
+              loadWifiList = await WifiManager.loadWifiList();
+              if (loadWifiList && loadWifiList.length > 0) {
+                updateWifiCache(loadWifiList, 'system');
+              }
+            }
+          }
         } catch (error) {
           console.log('强制扫描失败，使用缓存数据:', error);
 
           // 强制扫描失败，使用最佳可用缓存
-          const cachedData = getCachedWifiData();
+          const cachedData = getCachedWifiData(true);
           if (cachedData && cachedData.length > 0) {
             loadWifiList = cachedData;
           } else {
             // 没有有效缓存，尝试系统缓存
             loadWifiList = await WifiManager.loadWifiList();
-            updateWifiCache(loadWifiList, 'system');
+            if (loadWifiList && loadWifiList.length > 0) {
+              updateWifiCache(loadWifiList, 'system');
+            }
           }
         }
       }
@@ -468,26 +489,39 @@ export const Header = () => {
       if (filteredWifiList.length > 0) {
         setWifiList(filteredWifiList);
       } else {
-        setWifiList([]);
+        setWifiList((prevList) => {
+          if (prevList && prevList.length > 0) {
+            console.log('新获取的列表为空，保留当前显示的WiFi列表');
+            return prevList;
+          }
+          return [];
+        });
+
         if (type === 'manual') {
           showNotifier({
             title: t('wifi.noWifiList'),
             type: 'error',
             duration: 3000,
-            onPress: () => {},
+            onPress: () => { },
           });
         }
       }
     } catch (error) {
       console.error(t('wifi.wifiGetFailed'), error);
-      setWifiList([]);
+
+      setWifiList((prevList) => {
+        if (prevList && prevList.length > 0) {
+          return prevList;
+        }
+        return [];
+      });
 
       if (type === 'manual') {
         showNotifier({
           title: t('wifi.wifiGetFailed'),
           type: 'error',
           duration: 3000,
-          onPress: () => {},
+          onPress: () => { },
         });
       }
     }
@@ -530,7 +564,7 @@ export const Header = () => {
         title: t('wifi.passwordEmptyOrWifiNotSelected'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
       return;
     }
@@ -566,7 +600,7 @@ export const Header = () => {
         title: t('wifi.connectSuccess'),
         type: 'success',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
 
       setRobotStatus({
@@ -585,7 +619,7 @@ export const Header = () => {
         title: t('wifi.connectFailed'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
     }
   };

@@ -6,7 +6,7 @@ import { DownState, RebootState } from '@/constants';
 import { Command } from '@/constants/command';
 import useStore, { initWorkParams } from '@/store';
 import { ROBOT_CURRENT_MODE } from '@/types';
-import { globalGetConnect, sendCmdDispatch } from '@/utils/helper';
+import { globalGetConnect, sendCmdDispatch, sendCmdWithRepeat } from '@/utils/helper';
 import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
 
@@ -19,7 +19,7 @@ export const ControlExtraModule = () => {
         title: t('errors.lockModeTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
       return true;
     }
@@ -36,7 +36,7 @@ export const ControlExtraModule = () => {
         title: t('errors.autoFindPointTips3'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
       return;
     }
@@ -55,21 +55,26 @@ export const ControlExtraModule = () => {
   };
 
   const robotDown = () => {
-    if (isInLockedMode()) {
-      return;
-    }
 
     if (workParams.auto_find_point) {
       showNotifier({
         title: t('errors.autoFindPointTips2'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
       return;
     }
-    console.log('machineDescent');
+
     sendCmdDispatch(Command.machineDescent);
+    console.log('machineDescent');
+    sendCmdWithRepeat(
+      () => {
+        sendCmdDispatch(Command.manualModel);
+      },
+      2,
+      30
+    );
   };
 
   const robotReboot = () => {
@@ -82,11 +87,18 @@ export const ControlExtraModule = () => {
         title: t('errors.autoFindPointTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
       return;
     }
     if (robotStatus.rebootState === RebootState.finish) {
+      sendCmdWithRepeat(
+        () => {
+          sendCmdDispatch(Command.manualModel);
+        },
+        2,
+        30
+      );
       sendCmdDispatch(Command.lashedReboot);
     }
   };
@@ -96,11 +108,13 @@ export const ControlExtraModule = () => {
   };
 
   return (
-    <View className="relative flex w-full flex-row items-end justify-end">
+    <View className="relative flex w-full flex-row items-end justify-center">
       <View className="flex flex-row gap-x-5 gap-y-5">
-        <Button icon="reload" mode="elevated" onPress={robotReboot}>
-          {t('common.tyingRobotRestart')}
-        </Button>
+        {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (
+          <Button icon="reload" mode="elevated" onPress={robotReboot}>
+            {t('common.tyingRobotRestart')}
+          </Button>
+        ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
           <Button icon="restart" mode="elevated" onPress={triggerTrack}>
             {t('common.triggertrack')}

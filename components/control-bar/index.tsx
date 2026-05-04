@@ -43,7 +43,7 @@ export const ControlBar = () => {
       sendCmdDispatch(Command.BeginAutoMode);
       console.log('发送开始自动模式指令');
     } else {
-      sendCmdDispatch(Command.manualModel);
+      //sendCmdDispatch(Command.manualModel);
       setRobotStatus({
         isWorking: false,
       });

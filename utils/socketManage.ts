@@ -103,9 +103,9 @@ export class SocketManage {
       }
       // 创建新的TCP Socket连接
       const socket = TcpSocket.createConnection(options, () => {
-        ConnectDeviceInfo.setWifiIp(this.ip);   // 设置连接的IP地址
+        ConnectDeviceInfo.setWifiIp(this.ip); // 设置连接的IP地址
         ConnectDeviceInfo.connectStatus = true; // 更新连接状态
-        this.resetReconnectCount();             // 重置重连尝试计数
+        this.resetReconnectCount(); // 重置重连尝试计数
         // 重置初始连接尝试计数
         this.initialConnectAttempts = 0;
 
@@ -125,10 +125,10 @@ export class SocketManage {
       this.socket?.on('data', (data) => {
         try {
           // 将新数据添加到缓冲区
-          this.dataBuffer += data.toString();  // 将接收到的数据转换为字符串并追加到缓冲区
+          this.dataBuffer += data.toString(); // 将接收到的数据转换为字符串并追加到缓冲区
 
           // 处理缓冲区中的完整消息
-          this.processBuffer();                //拆包
+          this.processBuffer(); //拆包
         } catch (error) {
           console.error('onData error', error);
         }
@@ -174,7 +174,7 @@ export class SocketManage {
   onData(event: string) {
     try {
       const eventData = event;
-      //console.log(`>>> [SOCKET_RAW] 收到原始数据: ${eventData}`);
+     //console.log(`>>> [SOCKET_RAW] 收到原始数据: ${eventData}`);
       // 如果消息包含 'up'，表示机器人还活着，处理心跳响应
       if (eventData.includes('up')) {
         this.handleHeartbeatResponse();
@@ -191,7 +191,7 @@ export class SocketManage {
         const { setDebugLog, setBackBoardData, setMksData, setFrontBoardData } =
           useStore.getState();
         // 记录调试日志
-          setDebugLog({
+        setDebugLog({
           time: new Date().toISOString(),
           msg: `收到命令: ${eventData}`,
         });
@@ -201,7 +201,7 @@ export class SocketManage {
             ConnectDeviceInfo.id = listStr?.[2]; // 更新连接设备信息中的ID
             eventBus.publish(new IdEvent(listStr?.[2]).eventName, new IdEvent(listStr?.[2]).data);
             break;
-          case GlobalConst.gunErrorEvent:            // 枪口报错事件
+          case GlobalConst.gunErrorEvent: // 枪口报错事件
             const now = Date.now();
             if (now - this.lastGunErrorTime < this.GUN_ERROR_MIN_GAP) {
               console.warn('Gun error event ignored due to minimum gap');
@@ -210,12 +210,12 @@ export class SocketManage {
             this.lastGunErrorTime = now;
             eventBus.publish(new GunErrorEvent(1).eventName, new GunErrorEvent(1).data);
             break;
-          case GlobalConst.electric:               // 电量数据事件
+          case GlobalConst.electric: // 电量数据事件
             const temp = parseFloat(listStr?.[2]);
             ConnectDeviceInfo.electric = temp;
             eventBus.publish(new ElectricEvent(temp).eventName, new ElectricEvent(temp).data);
             break;
-          case GlobalConst.status:                // 工作状态事件
+          case GlobalConst.status: // 工作状态事件
             let temp2;
             if (listStr[2] === `2,${GlobalConst.error}`) {
               temp2 = TyingState.error;
