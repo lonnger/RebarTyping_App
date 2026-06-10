@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, Text, View } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import { ParamsSettingModal } from '../params-setting-modal';
@@ -36,7 +36,7 @@ export const StatusBox = () => {
       </View>
 
       <Button icon="cog" mode="contained" style={{ width: '80%' }} onPress={openSettingModal}>
-        {t('common.paramsSetting')}
+        <Text>{t('common.paramsSetting')}</Text>
       </Button>
     </View>
   );

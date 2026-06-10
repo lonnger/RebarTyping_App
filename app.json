@@ -2,7 +2,7 @@
   "expo": {
     "name": "钢筋绑扎机器人dev",
     "slug": "tyings",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "scheme": "tyings",
     "web": {
       "favicon": "./assets/favicon.png"

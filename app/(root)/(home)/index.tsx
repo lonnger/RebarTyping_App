@@ -17,8 +17,9 @@ const Home = () => {
 
   return (
     <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={headerHeight}>
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
     <ScrollView horizontal={true} contentContainerStyle={{ flexGrow: 1 }}>
     <View className="flex w-full">

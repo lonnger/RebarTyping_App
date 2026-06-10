@@ -4,14 +4,17 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
-import { Button, List, SegmentedButtons, TextInput, TouchableRipple } from 'react-native-paper';
+import Constants from 'expo-constants';
+import releaseNotes from './release-notes';
+
+import { Button, Dialog, List, Portal, SegmentedButtons, TextInput, TouchableRipple } from 'react-native-paper';
 
 import { Header } from '@/components/header';
 import { storage_config } from '@/constants';
 import i18n from '@/i18n/i18n';
 import useStore from '@/store';
 
-export default function Setting() {
+export default function () {
   const { canLoginInfo } = useStore((state) => state);
   const [language, setLanguage] = useState<'cn' | 'en' | 'hk'>('en');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -38,6 +41,13 @@ export default function Setting() {
   const goback = () => {
     router.back();
   };
+
+  const appVersion =
+    releaseNotes.version ||
+    (Constants.expoConfig && (Constants.expoConfig.version as string)) ||
+    (Constants.manifest && (Constants.manifest.version as string)) ||
+    '0.0.0';
+  const [isVersionDialogVisible, setIsVersionDialogVisible] = useState(false);
 
   const logout = async () => {
     await userInfo.removeItem();
@@ -158,13 +168,42 @@ export default function Setting() {
           </View>
           <View className="mt-5 flex flex-row items-center justify-center gap-10">
             <Button mode="contained" icon="logout" className="px-3" onPress={logout}>
-              {t('common.logout')}
+              <Text>{t('common.logout')}</Text>
             </Button>
 
             <Button mode="outlined" icon="arrow-left" className="px-3" onPress={goback}>
-              {t('common.back')}
+              <Text>{t('common.back')}</Text>
             </Button>
           </View>
+          <View className="mt-4 items-center justify-center">
+            <TouchableRipple
+              onPress={() => setIsVersionDialogVisible(true)}
+              rippleColor="rgba(0,0,0,0.08)"
+              className="rounded-md px-2 py-1">
+              <Text className="text-sm text-gray-500">版本 {appVersion}</Text>
+            </TouchableRipple>
+          </View>
+
+          <Portal>
+            <Dialog
+              visible={isVersionDialogVisible}
+              onDismiss={() => setIsVersionDialogVisible(false)}>
+              <Dialog.Title>版本更新</Dialog.Title>
+              <Dialog.Content>
+                <Text className="mb-3 text-base font-medium">当前版本：{appVersion}</Text>
+                {releaseNotes.notes.map((note, idx) => (
+                  <Text key={idx} className="text-sm leading-6 text-gray-700">
+                    {`${idx + 1}. ${note}`}
+                  </Text>
+                ))}
+              </Dialog.Content>
+              <Dialog.Actions>
+                <Button onPress={() => setIsVersionDialogVisible(false)}>
+                  <Text>关闭</Text>
+                </Button>
+              </Dialog.Actions>
+            </Dialog>
+          </Portal>
         </ScrollView>
       </View>
     </View>

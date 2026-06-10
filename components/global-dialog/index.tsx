@@ -54,8 +54,12 @@ const GlobalDialog = forwardRef((_: any, ref: any) => {
           <Text>{config.content}</Text>
         </Dialog.Content>
         <Dialog.Actions>
-          <Button onPress={hideDialog}>{t('common.cancel')}</Button>
-          <Button onPress={checkedCallback}>{t('common.confirm')}</Button>
+          <Button onPress={hideDialog}>
+            <Text>{t('common.cancel')}</Text>
+          </Button>
+          <Button onPress={checkedCallback}>
+            <Text>{t('common.confirm')}</Text>
+          </Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>

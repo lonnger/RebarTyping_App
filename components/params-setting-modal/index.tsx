@@ -428,10 +428,12 @@ export const ParamsSettingModal = ({ visible, onDismiss }: ParamsSettingModalPro
             onPress={() => {
               setEditModalVisible(false);
             }}>
-            {t('common.cancel')}
+            <Text>{t('common.cancel')}</Text>
           </Button>
 
-          <Button onPress={submitData}>{t('common.confirm')}</Button>
+          <Button onPress={submitData}>
+            <Text>{t('common.confirm')}</Text>
+          </Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>

@@ -48,7 +48,7 @@ export default function OldTestModal({
           />
           <View className="h-4" />
           <Button mode="contained" className="w-full" onPress={() => onConfirm(length, widthValue)}>
-            设置
+            <Text>设置</Text>
           </Button>
         </View>
       </Modal>

@@ -136,7 +136,7 @@ export default function Error() {
 
             <View className="mt-5 flex flex-row items-center justify-end gap-10">
               <Button mode="outlined" icon="arrow-left" className="px-3" onPress={goback}>
-                {t('common.back')}
+                <Text>{t('common.back')}</Text>
               </Button>
             </View>
           </Card>

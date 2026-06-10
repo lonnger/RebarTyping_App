@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import { DownState, RebootState } from '@/constants';
@@ -112,17 +112,17 @@ export const ControlExtraModule = () => {
       <View className="flex flex-row gap-x-5 gap-y-5">
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (
           <Button icon="reload" mode="elevated" onPress={robotReboot}>
-            {t('common.tyingRobotRestart')}
+            <Text>{t('common.tyingRobotRestart')}</Text>
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
           <Button icon="restart" mode="elevated" onPress={triggerTrack}>
-            {t('common.triggertrack')}
+            <Text>{t('common.triggertrack')}</Text>
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (
           <Button icon="elevator-down" mode="elevated" onPress={robotDown}>
-            {t('common.machineDown')}
+            <Text>{t('common.machineDown')}</Text>
           </Button>
         ) : null}
       </View>

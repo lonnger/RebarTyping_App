@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View, FlatList, Text } from 'react-native';
+import { View, ScrollView, FlatList, Text } from 'react-native';
 import { Button, Card, Dialog, Icon, Portal } from 'react-native-paper';
 
 import OldTestModal from './old-test-modal';
@@ -122,21 +122,25 @@ export default function TestModule() {
   };
 
   return (
-    <View className="flex w-full">
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      className="flex w-full"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}>
       <Header />
       <OldTestModal
         visible={isShowOldTestModal}
         onDismiss={() => setIsShowOldTestModal(false)}
         onConfirm={onOldTestConfirm}
       />
-      <View className="flex min-h-[72%] w-full flex-row px-3">
+      <View className="flex min-h-[72%] w-full flex-row flex-wrap px-3">
         <Card className=" mb-5 mr-3 w-[40%]" style={{ display: isShowlog ? 'none' : 'flex' }}>
           <Button
             mode="contained"
             icon="debug-step-out"
             className="mx-5 my-3"
             onPress={openDebugMode}>
-            打开测试模式(WIFICONTROLTEST)
+            <Text>打开测试模式(WIFICONTROLTEST)</Text>
           </Button>
 
           <Card.Content>
@@ -145,112 +149,112 @@ export default function TestModule() {
                 mode="text"
                 className="mx-1 mb-4 py-1 text-sm"
                 onPress={() => openDebugCommand(Command.sliderLeftTest)}>
-                横移 左(SliderLeftTest)
+                <Text>横移 左(SliderLeftTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.sliderRightTest)}>
-                横移 右(SliderRightTest)
+                <Text>横移 右(SliderRightTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.holdDownTest)}>
-                支撑杆 下 (HoldDownTest)
+                <Text>支撑杆 下 (HoldDownTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.holdUpTest)}>
-                支撑杆 上下 (HoldUpTest)
+                <Text>支撑杆 上 (HoldUpTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.legsDownTest)}>
-                辅助腿下 (LegsDownTest)
+                <Text>辅助腿下 (LegsDownTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.legsUpTest)}>
-                辅助腿上 (LegsUpTest)
+                <Text>辅助腿上 (LegsUpTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.gunDownTest)}>
-                枪 下 (GunDownTest)
+                <Text>枪 下 (GunDownTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.gunUpTest)}>
-                枪 上 (GunUpTest)
+                <Text>枪 上 (GunUpTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.lunForward)}>
-                轮子前进 (LunForward)
+                <Text>轮子前进 (LunForward)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4  text-sm"
                 onPress={() => openDebugCommand(Command.lunBackward)}>
-                轮子后退 (LunBackward)
+                <Text>轮子后退 (LunBackward)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4 text-sm"
                 onPress={() => openDebugCommand(Command.lunStop)}>
-                轮子停止 (LunStop)
+                <Text>轮子停止 (LunStop)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4 text-sm"
                 onPress={() => openDebugCommand(Command.GunTrigger)}>
-                枪绑扎 (GunTrigger)
+                <Text>枪绑扎 (GunTrigger)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4 text-sm"
                 onPress={() => openDebugCommand(Command.GunReboot)}>
-                枪重启 (GunReboot)
+                <Text>枪重启 (GunReboot)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4 text-sm"
                 onPress={() => openDebugCommand(Command.OldTest)}>
-                老化测试 (OldTest)
+                <Text>老化测试 (OldTest)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4 text-sm"
                 onPress={() => sendCmdDispatch(Command.OldTest)}>
-                老化测试 (纯命令)
+                <Text>老化测试 (纯命令)</Text>
               </Button>
 
               <Button
                 mode="text"
                 className="mx-1 mb-4 text-sm"
                 onPress={() => openDebugCommand(Command.stopOldTest)}>
-                停止老化测试 (StopOldTest)
+                <Text>停止老化测试 (StopOldTest)</Text>
               </Button>
             </View>
           </Card.Content>
@@ -317,7 +321,7 @@ export default function TestModule() {
                       icon="pause"
                       className="px-3"
                       onPress={() => setLogStatus('stop')}>
-                      暂停
+                      <Text>暂停</Text>
                     </Button>
                   ) : (
                     <Button
@@ -325,7 +329,7 @@ export default function TestModule() {
                       icon="play"
                       className="px-3"
                       onPress={() => setLogStatus('start')}>
-                      继续
+                      <Text>继续</Text>
                     </Button>
                   )}
                   <Button
@@ -335,14 +339,14 @@ export default function TestModule() {
                     onPress={() => {
                       clearDebugLog();
                     }}>
-                    清空
+                    <Text>清空</Text>
                   </Button>
                   <Button
                     mode="outlined"
                     icon={isShowlog ? 'fullscreen-exit' : 'fullscreen'}
                     className="px-3"
                     onPress={toggleFullscreen}>
-                    {isShowlog ? '退出日志' : '全屏'}
+                    <Text>{isShowlog ? '退出日志' : '全屏'}</Text>
                   </Button>
                 </View>
               </View>
@@ -353,13 +357,13 @@ export default function TestModule() {
 
       <View className="flex w-full flex-row justify-center gap-4">
         <Button mode="outlined" className="mx-5 my-2" onPress={toggleFullscreen}>
-          {isShowlog ? '退出日志' : '进入日志'}
+          <Text>{isShowlog ? '退出日志' : '进入日志'}</Text>
         </Button>
 
         <Button mode="outlined" className="mx-5 my-2" onPress={goback}>
-          返回
+          <Text>返回</Text>
         </Button>
       </View>
-    </View>
+    </ScrollView>
   );
 }

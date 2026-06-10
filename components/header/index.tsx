@@ -644,12 +644,12 @@ export const Header = () => {
                 mode="contained"
                 buttonColor="red"
                 onPress={handleForcePause}>
-                {t('common.softStop')}
+                <Text>{t('common.softStop')}</Text>
               </Button>
             ) : null}
 
             <Button icon="lock" mode="contained" buttonColor="#041FA5C0" onPress={handleLockScreen}>
-              {t('common.lockScreenTips')}
+              <Text>{t('common.lockScreenTips')}</Text>
             </Button>
 
             {!isLoginPage ? (
@@ -765,7 +765,9 @@ export const Header = () => {
               }}>
               {t('wifi.useNewPasswordTips')}
             </Button>
-            <Button onPress={connectWithSavedPassword}>{t('wifi.useSavedPasswordTips')}</Button>
+            <Button onPress={connectWithSavedPassword}>
+              <Text>{t('wifi.useSavedPasswordTips')}</Text>
+            </Button>
           </Dialog.Actions>
         </Dialog>
 
@@ -785,8 +787,12 @@ export const Header = () => {
             />
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={hideWifiPasswordDialog}>{t('common.cancel')}</Button>
-            <Button onPress={connectWithNewPassword}>{t('common.connect')}</Button>
+            <Button onPress={hideWifiPasswordDialog}>
+              <Text>{t('common.cancel')}</Text>
+            </Button>
+            <Button onPress={connectWithNewPassword}>
+              <Text>{t('common.connect')}</Text>
+            </Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
