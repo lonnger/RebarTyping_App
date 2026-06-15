@@ -93,14 +93,19 @@ export default function Login() {
   const closeGuideDialog = () => {
     setShowGuideDialog(false);
   };
-
+  const headerHeight = 100;
   return (
     <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-    <View className="flex h-full w-full">
-      <View className="relative w-full">
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={headerHeight}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}>
+        <View className="flex-1 w-full">
+          <View className="relative w-full">
         <Image
           source={require('@/assets/images/bg.jpg')}
           style={{
@@ -152,34 +157,34 @@ export default function Login() {
           <View className="relative flex w-5/12 items-center">
             <View className="w-full">
               <View className="">
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                  <View className="relative">
-                    <View className="absolute left-2 top-0 h-full w-10 items-center justify-center">
-                      <Icon source="account-circle-outline" size={22} />
-                    </View>
+                <View className="relative">
+                  <View className="absolute left-2 top-0 h-full w-10 items-center justify-center">
+                    <Icon source="account-circle-outline" size={22} />
+                  </View>
 
-                    <TextInput
-                      className="rounded-tl-2xl rounded-tr-2xl border-[0.5px] border-gray-500 py-5 pl-[50px]"
-                      placeholder={t('common.pleaseInputUsername')}
-                      value={username}
-                      onChangeText={(text) => setUsername(text)}
-                    />
+                  <TextInput
+                    className="rounded-tl-2xl rounded-tr-2xl border-[0.5px] border-gray-500 py-5 pl-[50px]"
+                    placeholder={t('common.pleaseInputUsername')}
+                    value={username}
+                    onChangeText={(text) => setUsername(text)}
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                  />
+                </View>
+                <View className="relative mt-2">
+                  <View className="absolute left-2 top-0 h-full w-10 items-center justify-center">
+                    <Icon source="lock-outline" size={22} />
                   </View>
-                </KeyboardAvoidingView>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                  <View className="relative">
-                    <View className="absolute left-2 top-0 h-full w-10 items-center justify-center">
-                      <Icon source="lock-outline" size={22} />
-                    </View>
-                    <TextInput
-                      className="rounded-bl-2xl rounded-br-2xl border-[0.5px] border-gray-500 py-5 pl-[50px]"
-                      placeholder={t('common.pleaseInputPassword')}
-                      secureTextEntry
-                      value={password}
-                      onChangeText={(text) => setPassword(text)}
-                    />
-                  </View>
-                </KeyboardAvoidingView>
+                  <TextInput
+                    className="rounded-bl-2xl rounded-br-2xl border-[0.5px] border-gray-500 py-5 pl-[50px]"
+                    placeholder={t('common.pleaseInputPassword')}
+                    secureTextEntry
+                    value={password}
+                    onChangeText={(text) => setPassword(text)}
+                    returnKeyType="done"
+                    onSubmitEditing={login}
+                  />
+                </View>
                 <View className="mt-5 flex flex-col items-start justify-center ">
                   <View className="flex flex-row items-center justify-start">
                     <Checkbox.Android
@@ -217,9 +222,9 @@ export default function Login() {
             </View>
           </View>
         </View>
-      </View>
-    </View>
-    </ScrollView>
-  </KeyboardAvoidingView>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

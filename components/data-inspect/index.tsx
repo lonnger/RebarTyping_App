@@ -35,13 +35,14 @@ export const DataInspect = () => {
     ]);
   }, [data_inspect, t]);
 
-  return (
-    <Card>
+return (
+    <Card className="w-11/12 mr-auto min-h-[30%]" style={{ marginTop: 0 }}>
       <View className="w-full px-5 pb-5 pt-2">
-        <View className="mb-2 mt-3 flex flex-row items-center justify-center">
+        <View className="mb-2 mt-3 flex flex-row items-start justify-center">
           <Icon source="database-sync-outline" size={22} />
-          <Text className=" ml-2 text-center text-2xl font-bold">{t('common.dataMonitor')}</Text>
+          <Text className="ml-2 text-center text-xl font-bold">{t('common.dataMonitor')}</Text>
         </View>
+        
         <DataTable>
           {items.map((item) => (
             <DataTable.Row key={item.key}>

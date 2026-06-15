@@ -625,19 +625,27 @@ export const Header = () => {
   };
 
   return (
-    <View
-      className="flex w-full flex-col items-end justify-between px-6 pt-5"
-      style={{ paddingTop: top + 20 }}>
-      <View className="mb-5 flex w-full flex-row items-center justify-between">
-        <Image
-          source={require('@/assets/hkcrc.png')}
-          style={{ width: 335, height: 39.39 }}
-          contentFit="contain"
-          transition={1000}
-        />
+  <View 
+  className="flex w-full flex-col px-6" 
+  style={{ paddingTop: top + 20 }}>
+        <View className="flex w-full flex-row items-start justify-between">
+        <View className="flex flex-col items-start gap-0">
+          <Image
+            source={require('@/assets/hkcrc.png')}
+            style={{ width: 358, height: 44 }}
+            contentFit="contain"
+            transition={1000}
+          />
+          <Image
+            source={require('@/assets/jinhang.png')}
+            style={{ width: 188, height: 64, marginTop: 0}}
+            contentFit="contain"
+            transition={1000}
+          />
+        </View>
 
         <View className="flex flex-row items-center gap-2">
-          <View className="flex flex-row items-center gap-2">
+          <View className="flex flex-row items-center gap-2 pt-1">
             {!isLoginPage ? (
               <Button
                 icon={robotStatus.robotDangerStatus ? 'pause' : 'play'}

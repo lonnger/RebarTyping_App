@@ -177,10 +177,10 @@ export default function () {
           </View>
           <View className="mt-4 items-center justify-center">
             <TouchableRipple
-              onPress={() => setIsVersionDialogVisible(true)}
+              onLongPress={() => setIsVersionDialogVisible(true)}
               rippleColor="rgba(0,0,0,0.08)"
               className="rounded-md px-2 py-1">
-              <Text className="text-sm text-gray-500">版本 {appVersion}</Text>
+              <Text className="text-sm text-gray-500">v. {appVersion}</Text>
             </TouchableRipple>
           </View>
 

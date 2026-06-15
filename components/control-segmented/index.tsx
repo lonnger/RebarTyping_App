@@ -129,6 +129,7 @@ export const ControlSegmented = () => {
             label: t('common.lock'),
             icon: 'lock',
             checkedColor: '#ffffff',
+            labelStyle: { fontSize: 11 },
             style: {
               backgroundColor:
                 robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED ? '#012641' : 'transparent',
@@ -139,6 +140,7 @@ export const ControlSegmented = () => {
             label: t('common.manual'),
             icon: 'camera-control',
             checkedColor: '#ffffff',
+            labelStyle: { fontSize: 11 },
             style: {
               backgroundColor:
                 robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? '#012641' : 'transparent',
@@ -149,6 +151,7 @@ export const ControlSegmented = () => {
             label: t('common.auto'),
             icon: 'robot-mower-outline',
             checkedColor: '#ffffff',
+            labelStyle: { fontSize: 11 },
             style: {
               backgroundColor:
                 robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? '#012641' : 'transparent',
@@ -185,6 +188,7 @@ export const ControlSegmented = () => {
               label: t('common.noLashed'),
               icon: 'not-equal-variant',
               checkedColor: '#ffffff',
+              labelStyle: { fontSize: 11 },
               style: {
                 backgroundColor:
                   robotStatus.currentBindingMode === ROBOT_WORK_MODE.WITHOUT_BINDING
@@ -197,6 +201,7 @@ export const ControlSegmented = () => {
               label: t('common.fullLashed'),
               icon: 'transit-connection',
               checkedColor: '#ffffff',
+              labelStyle: { fontSize: 11 },
               style: {
                 backgroundColor:
                   robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING
@@ -209,6 +214,7 @@ export const ControlSegmented = () => {
               label: t('common.skipLashed'),
               icon: 'transit-skip',
               checkedColor: '#ffffff',
+              labelStyle: { fontSize: 11 },
               style: {
                 backgroundColor:
                   robotStatus.currentBindingMode === ROBOT_WORK_MODE.SKIP_BINDING

@@ -32,11 +32,11 @@ export const ErrorData = () => {
   };
 
   return (
-    <Card className="min-h-[47%]">
+    <Card className="w-11/12 mr-auto min-h-[30%]" style={{ marginTop: -15 }}>
       <View className="w-full px-5">
-        <View className="mb-2 mt-3  flex flex-row items-center justify-center">
+        <View className="mb-1 mt-0 flex flex-row items-center justify-center">
           <Icon source="alert-circle-outline" size={22} />
-          <Text className="ml-2 text-center text-2xl font-bold">{t('malfunction.title')}</Text>
+          <Text className="ml-2 text-center text-xl font-bold">{t('malfunction.title')}</Text>
         </View>
         <DataTable>
           <DataTable.Header>

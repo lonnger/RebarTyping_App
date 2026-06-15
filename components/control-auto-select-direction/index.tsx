@@ -61,7 +61,8 @@ export const ControlAutoSelectDirection = ({
             mode="contained-tonal"
             buttonColor="#012641"
             textColor="#ffffff"
-            style={{ top: -80, left: -50 }}
+            style={{ top: -90, left: -40 }}
+            labelStyle={{ fontSize: 12 }}
             onPress={() => {
               onStart();
             }}>
@@ -72,7 +73,8 @@ export const ControlAutoSelectDirection = ({
             mode="contained-tonal"
             buttonColor="#FD1D1DD5"
             textColor="#ffffff"
-            style={{ top: -80, right: -50 }}
+            style={{ top: -90, right: -40 }}
+            labelStyle={{ fontSize: 12 }}
             onPress={() => {
               onStop();
             }}>

@@ -18,7 +18,7 @@ export const StatusBox = () => {
     <View className="w-[100%] flex-col items-center justify-center">
       <ParamsSettingModal visible={visible} onDismiss={hideModal} />
 
-      <View>
+      <View style={{ marginTop: -60 ,marginLeft: -15}}>
         <Image
           placeholder={{ blurhash: 'L3C00000' }}
           contentFit="contain"
