@@ -636,12 +636,14 @@ export const Header = () => {
             contentFit="contain"
             transition={1000}
           />
-          <Image
-            source={require('@/assets/jinhang.png')}
-            style={{ width: 188, height: 64, marginTop: 0}}
-            contentFit="contain"
-            transition={1000}
-          />
+        <View
+          style={{
+            width: 18,
+            height: 44,
+            marginTop: 0,
+            backgroundColor: '#F5F5F5',
+          }}
+        />
         </View>
 
         <View className="flex flex-row items-center gap-2">

@@ -65,7 +65,7 @@ export const ControlBar = () => {
   };
 
   return (
-    <Card className="relative" style={{ marginTop: -40 }}>
+    <Card className="relative" style={{ marginTop: -10 }}>
       <View className="flex  w-full flex-col justify-between px-8 pb-5 pt-2">
         <View className="flex flex-col items-center">
           <View className="mb-2 mt-3 flex flex-row items-center justify-center">
