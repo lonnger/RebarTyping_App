@@ -40,6 +40,7 @@ export enum Command {
   OldTest = 39, // 老化测试
   stopOldTest = 40, // 停止老化测试
   triggerTrack = 41, // 触发变轨
+
 }
 
 export enum userDefaultEvent {

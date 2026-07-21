@@ -103,6 +103,15 @@ export const ControlExtraModule = () => {
     }
   };
 
+  const cutWire = () => {
+    if (isInLockedMode()) {
+      return;
+    }
+
+    sendCmdDispatch(Command.lashedReboot);
+
+  };
+
   const triggerTrack = () => {
     sendCmdDispatch(Command.triggerTrack);
   };
@@ -113,6 +122,11 @@ export const ControlExtraModule = () => {
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (
           <Button icon="reload" mode="elevated" onPress={robotReboot}>
             <Text>{t('common.tyingRobotRestart')}</Text>
+          </Button>
+        ) : null}
+        {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
+          <Button icon="content-cut" mode="elevated" onPress={cutWire}>
+            <Text>{t('common.cutWire')}</Text>
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (

@@ -35,7 +35,7 @@ export const Bootstrap = () => {
     (state) => state
   );
   const { t } = useTranslation();
-  
+
   //挂载即执行
   useEffect(() => {
     databaseInit();  //初始化本地数据库并拉取用户信息
@@ -61,7 +61,7 @@ export const Bootstrap = () => {
     return () => {
       eventBus.unsubscribe(eventBusKey.SendCmdEvent, (cmd: Command) => {
         sendCmd(cmd);
-      }); 
+      });
 
       eventBus.unsubscribe(eventBusKey.WifiEvent, (data: { eConnect: boolean }) => {
         setRobotStatus({
@@ -79,31 +79,33 @@ export const Bootstrap = () => {
   }, []);
 
   //专门监听 GunErrorEvent（枪口异常）。一旦触发，会立即发送 lockUp（锁定）命令并弹出红色报错
-// 方案：使用依赖数组确保拿到最新的 rebootState
-useEffect(() => {
+  // 方案：使用依赖数组确保拿到最新的 rebootState
+  useEffect(() => {
 
-  const onGunError = () => {   
+    const onGunError = () => {
       // 模式切换
-      sendCmdDispatch(Command.lockUp);
+      //sendCmdDispatch(Command.lockUp);
       console.log('进入onGunError');
+      //console.log('机器人当前状态 (robotStatus):', useStore.getState().robotStatus);
+
       // 弹窗提示
       showNotifier({
         title: t('robot.gunError'),
         message: t('robot.gunErrorTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
     };
 
-  // 只有不在重启状态时，才建立订阅
-  eventBus.subscribe(eventBusKey.GunErrorEvent, onGunError);
+    // 只有不在重启状态时，才建立订阅
+    eventBus.subscribe(eventBusKey.GunErrorEvent, onGunError);
 
-  return () => {
-    // 状态切换时，自动销毁旧的订阅，清理现场
-    eventBus.unsubscribe(eventBusKey.GunErrorEvent, onGunError);
-  };
-}, []); 
+    return () => {
+      // 状态切换时，自动销毁旧的订阅，清理现场
+      eventBus.unsubscribe(eventBusKey.GunErrorEvent, onGunError);
+    };
+  }, []);
 
   //handleAppStateChange 处理应用状态变化时的逻辑
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -161,7 +163,7 @@ useEffect(() => {
       GlobalDialogManager.current?.show({
         title: t('wifi.connectDialogTips'),
         content: t('wifi.connectDialogTitle'),
-        callback: () => {},
+        callback: () => { },
       });
     }
   };
@@ -172,7 +174,7 @@ useEffect(() => {
         title: t('errors.robotDangerStatusTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => {},
+        onPress: () => { },
       });
       setDebugLog({
         time: new Date().toISOString(),
@@ -192,7 +194,7 @@ useEffect(() => {
         title: t('errors.robotUnconnectedTips'),
         type: 'error',
         duration: 1500,
-        onPress: () => {},
+        onPress: () => { },
       });
       setDebugLog({
         time: new Date().toISOString(),

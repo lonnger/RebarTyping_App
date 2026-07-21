@@ -43,7 +43,6 @@ export const Header = () => {
   const { top } = useSafeAreaInsets();
   const { setRobotStatus, robotStatus } = useStore((state) => state);
   const [wifiChooseListVisible, setWifiChooseListVisible] = useState(false);
-  const [wifiPermission, setWifiPermission] = useState(false);
   const [wifiList, setWifiList] = useState<WifiEntry[]>([]);
   const [wifiPassword, setWifiPassword] = useState('');
   const segments = useSegments();
@@ -58,10 +57,13 @@ export const Header = () => {
   // 保存的Wi-Fi密码
   const [savedWifiPasswords, setSavedWifiPasswords] = useState<{ [ssid: string]: string }>({});
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
+  const hasShownRobotWifiReminderRef = useRef(false);
+  const [currentWifiSSID, setCurrentWifiSSID] = useState<string | null>(null);
 
   const { width } = Dimensions.get('screen');
   // 当前选择的WiFi SSID, 用于连接WiFi中间临时存储
   const currentSelectedWifi = useRef<string>('');
+  const isRobotWifiSSID = (ssid: string) => ssid.indexOf(GlobalConst.wifiName) > -1;
 
   // WiFi缓存管理系统
   const [wifiCache, setWifiCache] = useState<{
@@ -174,6 +176,7 @@ export const Header = () => {
     // 监听来自机器人的WiFi事件
     const handleWifiEvent = (data: { eConnect: boolean }) => {
       if (!data.eConnect) {
+        setCurrentWifiSSID('');
         setRobotStatus({
           currentConnectWifiSSID: '',
         });
@@ -186,6 +189,34 @@ export const Header = () => {
       eventBus.unsubscribe(eventBusKey.WifiEvent, handleWifiEvent);
     };
   }, []);
+  useEffect(() => {
+    if (isLoginPage) {
+      return;
+    }
+
+    if (currentWifiSSID === null) {
+      return;
+    }
+
+    if (isRobotWifiSSID(currentWifiSSID)) {
+      hasShownRobotWifiReminderRef.current = false;
+      return;
+    }
+
+    if (hasShownRobotWifiReminderRef.current) {
+      return;
+    }
+
+    hasShownRobotWifiReminderRef.current = true;
+    showNotifier({
+      title: t('wifi.connectRobotWifiReminderTitle'),
+      message: t('wifi.connectRobotWifiReminderMessage'),
+      type: 'info',
+      duration: 5000,
+      onPress: () => {},
+    });
+  }, [currentWifiSSID, isLoginPage, t]);
+
 
   // 定期检查WiFi连接状态
   useEffect(() => {
@@ -193,21 +224,22 @@ export const Header = () => {
 
     const checkWifiStatus = async () => {
       try {
-        const currentSSID = await WifiManager.getCurrentWifiSSID();
+        const currentSSID = (await WifiManager.getCurrentWifiSSID()) || '';
+        setCurrentWifiSSID(currentSSID);
         const previousSSID = robotStatus.currentConnectWifiSSID;
+        const currentIsRobotWifi = isRobotWifiSSID(currentSSID);
 
         // 如果之前有连接的WiFi，但现在获取不到SSID，说明断联了
-        if (previousSSID && (!currentSSID || currentSSID === '')) {
+        if (previousSSID && !currentIsRobotWifi) {
           handleWifiDisconnected(`WiFi "${previousSSID}" ${t('common.disconnected')}`);
         }
         // 如果检测到WiFi变化（切换到其他WiFi）
         else if (currentSSID && previousSSID && currentSSID !== previousSSID) {
-          setRobotStatus({
-            currentConnectWifiSSID: currentSSID,
-          });
-
-          // 如果切换到的不是机器人WiFi，提示用户
-          if (currentSSID.indexOf(GlobalConst.wifiName) === -1) {
+          if (currentIsRobotWifi) {
+            setRobotStatus({
+              currentConnectWifiSSID: currentSSID,
+            });
+          } else {
             showNotifier({
               title: `${t('wifi.switchWifi')} ${currentSSID}`,
               message: t('wifi.notRobotWifi'),
@@ -218,7 +250,7 @@ export const Header = () => {
           }
         }
         // 如果之前没有连接，现在检测到有连接
-        else if (!previousSSID && currentSSID) {
+        else if (!previousSSID && currentIsRobotWifi) {
           setRobotStatus({
             currentConnectWifiSSID: currentSSID,
           });
@@ -249,6 +281,7 @@ export const Header = () => {
     const previousSSID = robotStatus.currentConnectWifiSSID;
 
     // 更新连接状态
+    setCurrentWifiSSID('');
     setRobotStatus({
       currentConnectWifiSSID: '',
     });
@@ -333,7 +366,7 @@ export const Header = () => {
   };
 
   // 获取WiFi权限
-  const getWifiPermission = async () => {
+  const getWifiPermission = async (): Promise<boolean> => {
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       {
@@ -343,19 +376,15 @@ export const Header = () => {
         buttonPositive: t('common.allow'),
       }
     );
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      setWifiPermission(true);
-    } else {
-      setWifiPermission(false);
-    }
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
   };
 
   // 打开WiFi设置
   const openWifiSetting = async () => {
     try {
       // 检查WiFi权限
-      await getWifiPermission();
-      if (!wifiPermission) {
+      const hasPermission = await getWifiPermission();
+      if (!hasPermission) {
         showNotifier({
           title: t('wifi.needWifiPermission'),
           type: 'error',
@@ -382,9 +411,22 @@ export const Header = () => {
 
   // 获取当前连接的WiFi SSID
   const fetchCurrentConnectWifiSSID = async () => {
-    const connectedWifiSSID = await WifiManager.getCurrentWifiSSID();
+    const connectedWifiSSID = (await WifiManager.getCurrentWifiSSID()) || '';
+    setCurrentWifiSSID(connectedWifiSSID);
+
+    if (isLoginPage) {
+      return;
+    }
+
+    if (isRobotWifiSSID(connectedWifiSSID)) {
+      setRobotStatus({
+        currentConnectWifiSSID: connectedWifiSSID,
+      });
+      return;
+    }
+
     setRobotStatus({
-      currentConnectWifiSSID: connectedWifiSSID,
+      currentConnectWifiSSID: '',
     });
   };
 
@@ -467,9 +509,14 @@ export const Header = () => {
         }
       }
 
+      const normalizedWifiList = Array.isArray(loadWifiList) ? loadWifiList : [];
+      if (!Array.isArray(loadWifiList)) {
+        console.warn('WiFi list response is not an array:', loadWifiList);
+      }
+
       // 处理和过滤WiFi数据
       const uniqueSSIDs = new Map();
-      loadWifiList.forEach((wifi) => {
+      normalizedWifiList.forEach((wifi) => {
         if (
           wifi.SSID &&
           wifi.SSID !== '(hidden SSID)' &&
@@ -624,6 +671,11 @@ export const Header = () => {
     }
   };
 
+  const robotWifiButtonLabel =
+    currentWifiSSID && isRobotWifiSSID(currentWifiSSID)
+      ? currentWifiSSID
+      : t('common.wifi');
+
   return (
   <View 
   className="flex w-full flex-col px-6" 
@@ -668,7 +720,7 @@ export const Header = () => {
                 onPress={openWifiSetting}>
                 <WifiHigh size={18} weight="bold" />
                 <Text className="text-sm text-gray-800">
-                  {robotStatus.currentConnectWifiSSID ? robotStatus.currentConnectWifiSSID : 'WiFi'}
+                  {robotWifiButtonLabel}
                 </Text>
               </TouchableOpacity>
             ) : null}
