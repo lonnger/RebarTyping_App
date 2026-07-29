@@ -170,7 +170,9 @@ export const Bootstrap = () => {
       const { currentConnectWifiSSID, currentConnectWifiPassword } = store.robotStatus;
       if (
         currentConnectWifiSSID.indexOf(GlobalConst.wifiName) > -1 &&
-        currentConnectWifiPassword !== ''
+        currentConnectWifiPassword !== '' &&
+        currentSSID.replace(/^"(.*)"$/, '$1') !==
+          currentConnectWifiSSID.replace(/^"(.*)"$/, '$1')
       ) {
         await WifiManager.connectToProtectedSSID(
           currentConnectWifiSSID,

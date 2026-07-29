@@ -29,6 +29,7 @@ import {
   saveIpCountryPayload,
 } from '@/utils/ipCountry';
 import { showNotifier } from '@/utils/notifier';
+import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
 
@@ -58,7 +59,13 @@ export default function Login() {
 
   useEffect(() => {
     loadSavedWifiPasswords();
-    fetchCurrentInternetWifiSSID();
+    void releaseEspWifiFromSystem()
+      .catch((error) => {
+        console.warn('releaseEspWifiFromSystem error', error);
+      })
+      .finally(() => {
+        void fetchCurrentInternetWifiSSID();
+      });
   }, []);
 
   useEffect(() => {

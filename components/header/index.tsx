@@ -36,6 +36,7 @@ import { ROBOT_CURRENT_MODE } from '@/types';
 import eventBus from '@/utils/eventBus';
 import { delayed, globalGetConnect, sendCmdDispatch } from '@/utils/helper';
 import { showNotifier } from '@/utils/notifier';
+import { requestEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 
 // Wi-Fi 密码存储键
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
@@ -58,6 +59,7 @@ export const Header = () => {
   // 保存的Wi-Fi密码
   const [savedWifiPasswords, setSavedWifiPasswords] = useState<{ [ssid: string]: string }>({});
   const [wifiConnecting, setWifiConnecting] = useState(false);
+  const [espSystemPasswordDialogVisible, setEspSystemPasswordDialogVisible] = useState(false);
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
   const [currentWifiSSID, setCurrentWifiSSID] = useState<string | null>(null);
   const hasShownRobotWifiPromptRef = useRef(false);
@@ -67,6 +69,11 @@ export const Header = () => {
   const currentSelectedWifi = useRef<string>('');
   const isRobotWifiSSID = (ssid: string) => ssid.indexOf(GlobalConst.wifiName) > -1;
   const normalizeWifiSSID = (ssid: string) => ssid.replace(/^"|"$/g, '');
+  const getSavedRobotWifiPassword = () => {
+    return Object.entries(savedWifiPasswords).find(([ssid]) =>
+      normalizeWifiSSID(ssid).startsWith(GlobalConst.wifiName)
+    )?.[1];
+  };
 
   // WiFi缓存管理系统
   const [wifiCache, setWifiCache] = useState<{
@@ -391,6 +398,112 @@ export const Header = () => {
     );
   };
 
+  const resolveSystemSelectedRobotSSID = async (nativeSSID?: string): Promise<string> => {
+    const selectedSSID = normalizeWifiSSID(nativeSSID || '');
+    if (selectedSSID.startsWith(GlobalConst.wifiName)) {
+      return selectedSSID;
+    }
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const currentSSID = normalizeWifiSSID((await WifiManager.getCurrentWifiSSID()) || '');
+      if (currentSSID.startsWith(GlobalConst.wifiName)) {
+        return currentSSID;
+      }
+      await delayed(250);
+    }
+
+    throw new Error('系统已连接 WiFi，但无法确认所选 ESP 网络名称');
+  };
+
+  const connectToSystemEspWifi = async (password: string): Promise<boolean> => {
+    if (wifiConnecting) {
+      return false;
+    }
+
+    try {
+      setWifiConnecting(true);
+      setWifiChooseListVisible(false);
+
+      console.log('[ESP_SYSTEM_PICKER_OPEN]', {
+        prefix: GlobalConst.wifiName,
+      });
+      const result = await requestEspWifiFromSystem(GlobalConst.wifiName, password);
+      const selectedSSID = await resolveSystemSelectedRobotSSID(result.ssid);
+
+      console.log('[ESP_SYSTEM_PICKER_SELECTED]', {
+        ssid: selectedSSID,
+      });
+      currentSelectedWifi.current = selectedSSID;
+      setCurrentWifiSSID(selectedSSID);
+      setRobotStatus({
+        currentConnectWifiSSID: selectedSSID,
+        currentConnectWifiPassword: password,
+      });
+
+      const passwordSaved = await saveWifiPassword(selectedSSID, password);
+      if (!passwordSaved) {
+        console.warn('[ESP_SYSTEM_PICKER_PASSWORD_SAVE_FAILED]', {
+          ssid: selectedSSID,
+        });
+      }
+
+      await delayed(200);
+      const robotConnected = await handleConnectToSocketAgain();
+      showNotifier({
+        title: robotConnected
+          ? `${t('wifi.connectSuccess')}: ${selectedSSID}`
+          : t('errors.robotUnconnectedTips'),
+        message: robotConnected ? '' : `${selectedSSID} / TCP 8080`,
+        type: robotConnected ? 'success' : 'error',
+        duration: robotConnected ? 3000 : 5000,
+        onPress: () => { },
+      });
+
+      return robotConnected;
+    } catch (error: any) {
+      if (error?.code === 'ESP_WIFI_UNAVAILABLE') {
+        console.log('[ESP_SYSTEM_PICKER_CANCELLED_OR_UNAVAILABLE]');
+        return false;
+      }
+
+      console.error('[ESP_SYSTEM_PICKER_ERROR]', error);
+      const errorMessages: Record<string, string> = {
+        ANDROID_VERSION_UNSUPPORTED: '当前 Android 版本不支持 ESP 系统选择窗口',
+        ESP_WIFI_LOST: '所选 ESP WiFi 连接已断开',
+        ESP_WIFI_REQUEST_FAILED: 'Android 无法打开 ESP WiFi 系统选择窗口',
+      };
+      showNotifier({
+        title: t('wifi.connectFailed'),
+        message: errorMessages[error?.code] || error?.message || '未知错误',
+        type: 'error',
+        duration: 5000,
+        onPress: () => { },
+      });
+      return false;
+    } finally {
+      setWifiConnecting(false);
+    }
+  };
+
+  const connectWithSystemEspPassword = async () => {
+    if (!wifiPassword) {
+      showNotifier({
+        title: t('wifi.passwordEmptyOrWifiNotSelected'),
+        type: 'error',
+        duration: 3000,
+        onPress: () => { },
+      });
+      return;
+    }
+
+    const password = wifiPassword;
+    setEspSystemPasswordDialogVisible(false);
+    const connected = await connectToSystemEspWifi(password);
+    if (connected) {
+      setWifiPassword('');
+    }
+  };
+
   // 打开WiFi设置
   const openWifiSetting = async () => {
     try {
@@ -403,6 +516,17 @@ export const Header = () => {
           duration: 3000,
           onPress: () => { },
         });
+        return;
+      }
+
+      if (Platform.OS === 'android' && Number(Platform.Version) >= 29) {
+        const savedRobotWifiPassword = getSavedRobotWifiPassword();
+        if (savedRobotWifiPassword) {
+          await connectToSystemEspWifi(savedRobotWifiPassword);
+        } else {
+          setWifiPassword('');
+          setEspSystemPasswordDialogVisible(true);
+        }
         return;
       }
 
@@ -978,6 +1102,35 @@ export const Header = () => {
             </Button>
             <Button onPress={connectWithSavedPassword}>
               <Text>{t('wifi.useSavedPasswordTips')}</Text>
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        {/* Android 系统 ESP WiFi 选择窗口使用的通用密码 */}
+        <Dialog
+          visible={espSystemPasswordDialogVisible}
+          style={{ width: '80%', left: '0%', right: '0%', marginHorizontal: 'auto' }}
+          onDismiss={() => setEspSystemPasswordDialogVisible(false)}>
+          <Dialog.Title>{t('wifi.inputWifiPassword')}</Dialog.Title>
+          <Dialog.Content>
+            <TextInput
+              placeholder={t('wifi.inputWifiPassword')}
+              value={wifiPassword}
+              secureTextEntry
+              onChangeText={setWifiPassword}
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button
+              disabled={wifiConnecting}
+              onPress={() => setEspSystemPasswordDialogVisible(false)}>
+              <Text>{t('common.cancel')}</Text>
+            </Button>
+            <Button
+              loading={wifiConnecting}
+              disabled={wifiConnecting}
+              onPress={connectWithSystemEspPassword}>
+              <Text>{t('common.connect')}</Text>
             </Button>
           </Dialog.Actions>
         </Dialog>

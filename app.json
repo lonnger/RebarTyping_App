@@ -40,7 +40,8 @@
         {
           "fineLocationPermission": false
         }
-      ]
+      ],
+      "./plugins/withEspWifiPicker"
     ],
     "orientation": "landscape",
     "icon": "./assets/icon.png",

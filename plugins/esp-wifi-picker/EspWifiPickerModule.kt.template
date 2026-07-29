@@ -1,0 +1,176 @@
+package __PACKAGE_NAME__
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
+import android.net.wifi.WifiNetworkSpecifier
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.PatternMatcher
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+
+class EspWifiPickerModule(
+  private val reactContext: ReactApplicationContext
+) : ReactContextBaseJavaModule(reactContext) {
+
+  private val connectivityManager =
+    reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+  private val wifiManager =
+    reactContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+  private val mainHandler = Handler(Looper.getMainLooper())
+
+  private var activeCallback: ConnectivityManager.NetworkCallback? = null
+  private var pendingPromise: Promise? = null
+
+  override fun getName(): String = "EspWifiPicker"
+
+  @ReactMethod
+  fun requestEspWifi(prefix: String, password: String, promise: Promise) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+      promise.reject(
+        "ANDROID_VERSION_UNSUPPORTED",
+        "The filtered system WiFi picker requires Android 10 or newer."
+      )
+      return
+    }
+
+    if (prefix.isBlank() || password.isBlank()) {
+      promise.reject("INVALID_ARGUMENT", "WiFi prefix and password are required.")
+      return
+    }
+
+    pendingPromise?.reject(
+      "ESP_WIFI_REQUEST_REPLACED",
+      "A newer ESP WiFi request replaced this request."
+    )
+    pendingPromise = null
+    releaseActiveRequest(unbindProcess = true)
+
+    try {
+      val specifier = WifiNetworkSpecifier.Builder()
+        .setSsidPattern(PatternMatcher(prefix, PatternMatcher.PATTERN_PREFIX))
+        .setWpa2Passphrase(password)
+        .build()
+
+      val request = NetworkRequest.Builder()
+        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+        .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
+        .setNetworkSpecifier(specifier)
+        .build()
+
+      val callback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+          if (activeCallback !== this) {
+            return
+          }
+
+          connectivityManager.bindProcessToNetwork(network)
+
+          // Give Android a short moment to expose the selected SSID to WifiInfo.
+          mainHandler.postDelayed({
+            if (activeCallback !== this) {
+              return@postDelayed
+            }
+
+            val result = Arguments.createMap()
+            result.putString("ssid", getSelectedSsid(network))
+            pendingPromise?.resolve(result)
+            pendingPromise = null
+          }, 300)
+        }
+
+        override fun onUnavailable() {
+          if (activeCallback !== this) {
+            return
+          }
+
+          pendingPromise?.reject(
+            "ESP_WIFI_UNAVAILABLE",
+            "No matching ESP WiFi was selected or the request timed out."
+          )
+          pendingPromise = null
+          releaseActiveRequest(unbindProcess = true)
+        }
+
+        override fun onLost(network: Network) {
+          if (activeCallback !== this) {
+            return
+          }
+
+          pendingPromise?.reject(
+            "ESP_WIFI_LOST",
+            "The selected ESP WiFi connection was lost."
+          )
+          pendingPromise = null
+          releaseActiveRequest(unbindProcess = true)
+        }
+      }
+
+      activeCallback = callback
+      pendingPromise = promise
+      connectivityManager.requestNetwork(request, callback, WIFI_REQUEST_TIMEOUT_MS)
+    } catch (error: Exception) {
+      pendingPromise = null
+      releaseActiveRequest(unbindProcess = true)
+      promise.reject("ESP_WIFI_REQUEST_FAILED", error.message, error)
+    }
+  }
+
+  @ReactMethod
+  fun releaseEspWifi(promise: Promise) {
+    pendingPromise?.reject(
+      "ESP_WIFI_RELEASED",
+      "The ESP WiFi request was released."
+    )
+    pendingPromise = null
+    releaseActiveRequest(unbindProcess = true)
+    promise.resolve(null)
+  }
+
+  override fun invalidate() {
+    releaseActiveRequest(unbindProcess = true)
+    super.invalidate()
+  }
+
+  private fun getSelectedSsid(network: Network): String {
+    val networkWifiInfo =
+      connectivityManager.getNetworkCapabilities(network)?.transportInfo as? WifiInfo
+    val rawSsid = networkWifiInfo?.ssid ?: wifiManager.connectionInfo?.ssid.orEmpty()
+
+    return rawSsid
+      .removePrefix("\"")
+      .removeSuffix("\"")
+      .takeUnless { it == WifiManager.UNKNOWN_SSID }
+      .orEmpty()
+  }
+
+  private fun releaseActiveRequest(unbindProcess: Boolean) {
+    activeCallback?.let { callback ->
+      try {
+        connectivityManager.unregisterNetworkCallback(callback)
+      } catch (_: Exception) {
+        // The callback may already have been released by Android.
+      }
+    }
+    activeCallback = null
+    pendingPromise = null
+
+    if (unbindProcess) {
+      connectivityManager.bindProcessToNetwork(null)
+    }
+  }
+
+  companion object {
+    private const val WIFI_REQUEST_TIMEOUT_MS = 60_000
+  }
+}
