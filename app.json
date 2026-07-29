@@ -64,7 +64,8 @@
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "NEARBY_WIFI_DEVICES"
       ],
       "package": "com.tyings.appdev"
     },

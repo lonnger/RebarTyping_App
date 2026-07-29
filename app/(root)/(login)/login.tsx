@@ -1,5 +1,6 @@
 import { useAsyncStorage } from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,16 +23,14 @@ import WifiManager, { WifiEntry } from 'react-native-wifi-reborn';
 import { Header } from '@/components/header';
 import { GlobalConst, storage_config } from '@/constants';
 import useStore from '@/store';
+import {
+  getCountryPayloadFromIpInfo,
+  getSavedIpCountryPayload,
+  saveIpCountryPayload,
+} from '@/utils/ipCountry';
 import { showNotifier } from '@/utils/notifier';
 
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
-
-type IpLocation = {
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  timestamp: number;
-};
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -47,16 +46,14 @@ export default function Login() {
   const [savedPasswordDialogVisible, setSavedPasswordDialogVisible] = useState(false);
   const [savedWifiPasswords, setSavedWifiPasswords] = useState<{ [ssid: string]: string }>({});
   const [currentInternetWifiSSID, setCurrentInternetWifiSSID] = useState('');
-  const [ipLocation, setIpLocation] = useState<IpLocation | null>(null);
-  const [ipAddress, setIpAddress] = useState<string | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
 
   const { width, height } = Dimensions.get('screen');
   const { canLoginInfo } = useStore((state) => state);
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
   const currentSelectedWifi = useRef('');
+  const ipLocationRequestInFlightRef = useRef(false);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -88,6 +85,10 @@ export default function Login() {
   }, [internetWifiVisible]);
 
   const login = async () => {
+    if (loadingLocation || ipLocationRequestInFlightRef.current) {
+      return;
+    }
+
     if (username === '' || password === '') {
       showNotifier({
         title: t('errors.emptyCredentials'),
@@ -118,9 +119,26 @@ export default function Login() {
       return;
     }
 
-    if (!ipLocation) {
+    const ipLocationSaved = await handleGetIPLocation();
+    if (!ipLocationSaved) {
       showNotifier({
-        title: '请先连接可上网 WiFi 并获取 IP 定位信息',
+        title: t('errors.networkLoginRequired'),
+        type: 'error',
+        duration: 5000,
+        onPress: () => {},
+      });
+      return;
+    }
+
+    let savedIpCountry = null;
+    try {
+      savedIpCountry = await getSavedIpCountryPayload();
+    } catch (error) {
+      console.error('getSavedIpCountryPayload error', error);
+    }
+    if (!savedIpCountry) {
+      showNotifier({
+        title: t('errors.networkLoginRequired'),
         type: 'error',
         duration: 5000,
         onPress: () => {},
@@ -227,6 +245,18 @@ export default function Login() {
   };
 
   const openInternetWifiWindow = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        await IntentLauncher.startActivityAsync('android.settings.panel.action.WIFI');
+      } catch (error) {
+        console.warn('Unable to open WiFi panel, falling back to WiFi settings', error);
+        await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.WIFI_SETTINGS);
+      }
+
+      await fetchCurrentInternetWifiSSID();
+      return;
+    }
+
     await fetchCurrentInternetWifiSSID();
 
     const hasPermission = await requestWifiPermission();
@@ -374,14 +404,17 @@ export default function Login() {
     }
   };
 
-  const handleGetIPLocation = async () => {
+  const handleGetIPLocation = async (): Promise<boolean> => {
+    if (ipLocationRequestInFlightRef.current) {
+      return false;
+    }
+
+    ipLocationRequestInFlightRef.current = true;
     setLoadingLocation(true);
-    setLocationError(null);
-    setIpAddress(null);
 
     try {
       const res = await fetch(
-        'http://ip-api.com/json/?lang=zh-CN&fields=status,message,country,regionName,city,district,lat,lon'
+        'http://ip-api.com/json/?lang=zh-CN&fields=status,message,country,countryCode,regionName,city,district,lat,lon'
       );
       const data = await res.json();
 
@@ -389,23 +422,14 @@ export default function Login() {
         throw new Error(data.message || 'ip-api.com 返回失败');
       }
 
-      setIpLocation({
-        latitude: Number(data.lat),
-        longitude: Number(data.lon),
-        accuracy: 5000,
-        timestamp: Date.now(),
-      });
-
-      const addressParts = [data.country, data.regionName, data.city, data.district].filter(
-        Boolean
-      );
-      setIpAddress(addressParts.length >= 2 ? `${addressParts.join('')}` : null);
+      const countryPayload = getCountryPayloadFromIpInfo(data.country, data.countryCode);
+      await saveIpCountryPayload(countryPayload);
+      return true;
     } catch (err: any) {
       console.error('获取 IP 定位失败:', err);
-      setLocationError(
-        `获取 IP 定位失败: ${err?.message || '未知错误'}。请确认设备已连接可上网的 Wi-Fi。`
-      );
+      return false;
     } finally {
+      ipLocationRequestInFlightRef.current = false;
       setLoadingLocation(false);
     }
   };
@@ -648,61 +672,26 @@ export default function Login() {
                     </View>
 
                     <View className="mt-5 flex flex-row items-center justify-center gap-10">
-                      <Button mode="contained" icon="login" className="w-full px-3" onPress={login}>
+                      <Button
+                        mode="contained"
+                        icon="login"
+                        className="w-full px-3"
+                        loading={loadingLocation}
+                        disabled={loadingLocation}
+                        onPress={login}>
                         <Text className="text-lg font-bold">{t('common.login')}</Text>
                       </Button>
                     </View>
 
-                    <View className="mt-5 flex flex-row items-center justify-between gap-3">
-                  <Button
-                    mode="outlined"
-                    icon="wifi"
-                    className="flex-1"
-                    onPress={openInternetWifiWindow}>
-                    <Text numberOfLines={1}>{internetWifiButtonLabel}</Text>
-                  </Button>
+                    <View className="mt-5 flex flex-row items-center justify-between">
                       <Button
                         mode="outlined"
-                        icon="map-marker-radius-outline"
-                        className="flex-1"
-                        loading={loadingLocation}
-                        disabled={loadingLocation}
-                        onPress={handleGetIPLocation}>
-                        <Text>{loadingLocation ? '定位中...' : 'IP 定位测试'}</Text>
+                        icon="wifi"
+                        className="w-full"
+                        onPress={openInternetWifiWindow}>
+                        <Text numberOfLines={1}>{internetWifiButtonLabel}</Text>
                       </Button>
                     </View>
-
-                    {(ipLocation || locationError) && (
-                      <View className="mt-4 rounded-lg bg-white/90 p-4">
-                        {ipAddress ? (
-                          <Text className="mb-2 border-b border-gray-300 pb-1.5 text-base font-bold leading-6 text-gray-900">
-                            地址: {ipAddress}
-                          </Text>
-                        ) : null}
-                        {ipLocation ? (
-                          <>
-                            <Text className="text-sm leading-6 text-gray-800">
-                              纬度 (Latitude): {ipLocation.latitude.toFixed(6)}
-                            </Text>
-                            <Text className="text-sm leading-6 text-gray-800">
-                              经度 (Longitude): {ipLocation.longitude.toFixed(6)}
-                            </Text>
-                            <Text className="text-sm leading-6 text-gray-800">
-                              精度 (Accuracy): 约 {ipLocation.accuracy.toFixed(0)} 米
-                            </Text>
-                            <Text className="text-sm leading-6 text-gray-800">
-                              时间 (Timestamp):{' '}
-                              {new Date(ipLocation.timestamp).toLocaleTimeString()}
-                            </Text>
-                          </>
-                        ) : null}
-                        {locationError ? (
-                          <Text className="mt-2 text-sm font-bold text-red-500">
-                            {locationError}
-                          </Text>
-                        ) : null}
-                      </View>
-                    )}
                   </View>
                 </View>
               </View>

@@ -9,7 +9,7 @@ import { GlobalActivityIndicatorManager } from '../activity-indicator-global';
 import { EventHandler } from './event';
 import { GlobalDialogManager } from '../global-dialog';
 
-import { GlobalConst, storage_config } from '@/constants';
+import { DownState, GlobalConst, RebootState, storage_config } from '@/constants';
 import { Command } from '@/constants/command';
 import { eventBusKey } from '@/constants/event';
 import database from '@/model/manager';
@@ -19,8 +19,8 @@ import eventBus from '@/utils/eventBus';
 import { delayed, globalGetConnect, sendCmdDispatch } from '@/utils/helper';
 import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
+import { printTerminalLogo } from '@/utils/terminalLog';
 import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
-import { DownState, RebootState } from '@/constants';
 // 这个组件主要做一些初始化功能
 export const Bootstrap = () => {
   //新增一个状态来控制枪口错误提示的频率，避免短时间内多次触发
@@ -38,10 +38,18 @@ export const Bootstrap = () => {
 
   //挂载即执行
   useEffect(() => {
+    printTerminalLogo();
     databaseInit();  //初始化本地数据库并拉取用户信息
     checkLogin();    //检查是否登录，未登录则跳转到登录页
-    setTimeout(() => {
-      globalGetConnect();   //尝试建立与机器人的初始化网络连接
+    setTimeout(async () => {
+      try {
+        const connectedWifiSSID = (await WifiManager.getCurrentWifiSSID()) || '';
+        if (connectedWifiSSID.indexOf(GlobalConst.wifiName) > -1) {
+          await globalGetConnect();
+        }
+      } catch (error) {
+        console.warn('Initial robot WiFi check skipped', error);
+      }
     }, 50);
   }, []);
 
@@ -138,6 +146,22 @@ export const Bootstrap = () => {
 
   const restartConnect = async () => {
     if (!ConnectDeviceInfo.connectStatus || !SocketManage.getInstance().isConnected()) {
+      let currentSSID = '';
+      try {
+        currentSSID = (await WifiManager.getCurrentWifiSSID()) || '';
+      } catch (error) {
+        console.warn('[ROBOT_RECONNECT_SKIPPED] unable to read current WiFi', error);
+        return;
+      }
+
+      if (currentSSID.indexOf(GlobalConst.wifiName) === -1) {
+        console.log('[ROBOT_RECONNECT_SKIPPED]', {
+          reason: 'current WiFi is not robot WiFi',
+          ssid: currentSSID,
+        });
+        return;
+      }
+
       GlobalActivityIndicatorManager.current?.show(t('robot.waitingForReconnection'), 0);
 
       await delayed(2000);
@@ -190,6 +214,12 @@ export const Bootstrap = () => {
         msg: `成功发送命令: ${cmd}`,
       });
     } else {
+      console.warn('[ROBOT_COMMAND_BLOCKED]', {
+        cmd,
+        connectStatus: ConnectDeviceInfo.connectStatus,
+        socketConnected: socket.isConnected(),
+        wifiIp: ConnectDeviceInfo.getWifiIp(),
+      });
       showNotifier({
         title: t('errors.robotUnconnectedTips'),
         type: 'error',

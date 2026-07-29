@@ -21,6 +21,7 @@ import { Header } from '@/components/header';
 import { storage_config } from '@/constants';
 import i18n from '@/i18n/i18n';
 import useStore from '@/store';
+import { SocketManage } from '@/utils/socketManage';
 
 export default function () {
   const { canLoginInfo } = useStore((state) => state);
@@ -58,6 +59,7 @@ export default function () {
   const [isVersionDialogVisible, setIsVersionDialogVisible] = useState(false);
 
   const logout = async () => {
+    SocketManage.getInstance().disconnectSocket();
     await userInfo.removeItem();
     router.dismissAll();
     router.replace('/(root)/(login)');

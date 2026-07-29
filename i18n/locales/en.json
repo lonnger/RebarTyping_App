@@ -93,8 +93,8 @@
       "connectDialogTips": "WIFI/SOCKET connection prompt",
       "connectDialogTitle": "If the connection fails, you can click the Wi-Fi icon in the upper right corner to select the ESP-prefix WiFi for manual connection",
       "connectRobotWifi": "Connect robot WiFi",
-      "connectRobotWifiReminderTitle": "Connect robot WiFi first",
-      "connectRobotWifiReminderMessage": "You are connected to internet WiFi. After entering the app, please switch to the robot WiFi.",
+      "connectRobotWifiReminderTitle": "Please connect to the machine WiFi first",
+      "connectRobotWifiReminderMessage": "After entering the operation screen, connect to the machine WiFi whose name starts with ESP.",
       "autoConnect": "Auto connect",
       "savedPassword": "saved password",
       "enterPassword": "Please enter password",
@@ -139,6 +139,7 @@
     },
     "errors": {
       "emptyCredentials": "Username and password cannot be empty",
+      "networkLoginRequired": "Login failed. Please connect to the internet and try again.",
       "invalidCredentials": "Incorrect username or password",
       "readManual": "Please read the user manual and acknowledge its contents",
       "wifiPermission": "Location permission is required to connect to WiFi",

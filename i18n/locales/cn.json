@@ -92,7 +92,7 @@
     "connectDialogTitle": "如果连接失败，可点击右上角Wi-Fi图标选择ESP-前缀WiFi进行手动连接",
     "connectRobotWifi": "连接机器WiFi",
     "connectRobotWifiReminderTitle": "请先连接机器WiFi",
-    "connectRobotWifiReminderMessage": "当前连接的是上网WiFi，进入使用界面后需要切换到机器WiFi。",
+    "connectRobotWifiReminderMessage": "进入操作界面后连接ESP开头的机器WiFi。",
     "selectWifi": "选择WiFi",
     "detected": "检测到",
     "enterPassword": "请输入密码",
@@ -137,6 +137,7 @@
   },
   "errors": {
     "emptyCredentials": "用户名和密码不能为空",
+    "networkLoginRequired": "登录失败，请联网登录",
     "invalidCredentials": "用户名或密码错误",
     "readManual": "请先阅读用户手册并知悉该手册",
     "wifiPermission": "位置权限是连接WiFi的必要条件",

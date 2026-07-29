@@ -14,26 +14,108 @@ export const delayed = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-export const globalGetConnect = async () => {
+let robotConnectRequestId = 0;
+
+const isUsableGatewayIp = (gatewayIp: string | null): gatewayIp is string => {
+  return Boolean(
+    gatewayIp &&
+      gatewayIp !== '0.0.0.0' &&
+      gatewayIp !== '::' &&
+      gatewayIp !== '127.0.0.1' &&
+      gatewayIp !== 'localhost'
+  );
+};
+
+const waitForRobotWifi = async () => {
+  let lastError: unknown = null;
+  let lastSSID = '';
+  let lastGatewayIp: string | null = null;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      lastSSID = (await WifiManager.getCurrentWifiSSID()) || '';
+      lastGatewayIp = await NetworkInfo.getGatewayIPAddress();
+
+      console.log('[ROBOT_WIFI_CHECK]', {
+        attempt: attempt + 1,
+        ssid: lastSSID,
+        gatewayIp: lastGatewayIp,
+      });
+
+      if (lastSSID.indexOf(GlobalConst.wifiName) > -1 && isUsableGatewayIp(lastGatewayIp)) {
+        return {
+          connectedWifiSSID: lastSSID,
+          gatewayIp: lastGatewayIp,
+        };
+      }
+    } catch (error) {
+      lastError = error;
+      console.warn('[ROBOT_WIFI_CHECK] network is not ready', error);
+    }
+
+    await delayed(500);
+  }
+
+  const reason =
+    lastError instanceof Error
+      ? lastError.message
+      : `SSID=${lastSSID || 'unknown'}, gateway=${lastGatewayIp || 'unknown'}`;
+  throw new Error(`ESP WiFi is not ready: ${reason}`);
+};
+
+export const globalGetConnect = async (forceReconnect: boolean = false): Promise<boolean> => {
+  const requestId = ++robotConnectRequestId;
+
   try {
-    const connectedWifiSSID = await WifiManager.getCurrentWifiSSID();
+    const { connectedWifiSSID, gatewayIp: readyGatewayIp } = await waitForRobotWifi();
+    const socket = SocketManage.getInstance();
+
+    if (requestId !== robotConnectRequestId) {
+      console.log('[ROBOT_CONNECT_CANCELLED]', { requestId });
+      return socket.isConnected();
+    }
+
     if (connectedWifiSSID !== '') {
-      const getGatewayIp = await NetworkInfo.getGatewayIPAddress();
+      const getGatewayIp = readyGatewayIp;
       if (
         connectedWifiSSID !== '' &&
         getGatewayIp !== null &&
         connectedWifiSSID.indexOf(GlobalConst.wifiName) > -1
       ) {
-        ConnectDeviceInfo.setWifiIp(getGatewayIp);
-        const socket = SocketManage.getInstance();
         const ip = getGatewayIp;
         const port = ConnectDeviceInfo.wifiPort;
 
         if (ip !== '' && port !== 0) {
+          if (!forceReconnect && ConnectDeviceInfo.getWifiIp() === ip && socket.isConnected()) {
+            return true;
+          }
+
+          ConnectDeviceInfo.disConnect();
+          if (forceReconnect) {
+            socket.resetConnectionAttempts();
+          }
           // 设置WiFi IP 和 port
           socket.setWifi(ip, port);
           // 连接socket
-          socket.connectSocket();
+          void socket.connectSocket();
+
+          const connected = await socket.waitForConnection(15000);
+
+          if (requestId !== robotConnectRequestId) {
+            console.log('[ROBOT_CONNECT_CANCELLED]', { requestId });
+            return socket.isConnected();
+          }
+          console.log('[ROBOT_SOCKET_CHECK]', {
+            connected,
+            host: ip,
+            port,
+          });
+
+          if (!connected) {
+            throw new Error(`Robot socket is not connected: ${ip}:${port}`);
+          }
+
+          return true;
         } else {
           showNotifier({
             title: i18n.t('wifi.missingIpOrPort'),
@@ -42,6 +124,7 @@ export const globalGetConnect = async () => {
             duration: 3000,
             onPress: () => {},
           });
+          return false;
         }
       }
     } else {
@@ -52,8 +135,15 @@ export const globalGetConnect = async () => {
         duration: 3000,
         onPress: () => {},
       });
+      return false;
     }
   } catch (error) {
+    if (requestId !== robotConnectRequestId) {
+      console.log('[ROBOT_CONNECT_CANCELLED]', { requestId });
+      return SocketManage.getInstance().isConnected();
+    }
+
+    console.error('globalGetConnect error', error);
     showNotifier({
       title: i18n.t('wifi.networkStatusFailed'),
       message: '',
@@ -61,7 +151,10 @@ export const globalGetConnect = async () => {
       duration: 3000,
       onPress: () => {},
     });
+    return false;
   }
+
+  return false;
 };
 
 export const sendCmdDispatch = (cmd: Command) => {

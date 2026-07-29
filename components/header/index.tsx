@@ -19,6 +19,7 @@ import {
   FlatList,
   AppState,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Button, Dialog, Icon, Modal, Portal, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,14 +57,16 @@ export const Header = () => {
   const [savedPasswordDialogVisible, setSavedPasswordDialogVisible] = useState(false);
   // 保存的Wi-Fi密码
   const [savedWifiPasswords, setSavedWifiPasswords] = useState<{ [ssid: string]: string }>({});
+  const [wifiConnecting, setWifiConnecting] = useState(false);
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
-  const hasShownRobotWifiReminderRef = useRef(false);
   const [currentWifiSSID, setCurrentWifiSSID] = useState<string | null>(null);
+  const hasShownRobotWifiPromptRef = useRef(false);
 
   const { width } = Dimensions.get('screen');
   // 当前选择的WiFi SSID, 用于连接WiFi中间临时存储
   const currentSelectedWifi = useRef<string>('');
   const isRobotWifiSSID = (ssid: string) => ssid.indexOf(GlobalConst.wifiName) > -1;
+  const normalizeWifiSSID = (ssid: string) => ssid.replace(/^"|"$/g, '');
 
   // WiFi缓存管理系统
   const [wifiCache, setWifiCache] = useState<{
@@ -163,11 +166,23 @@ export const Header = () => {
   // 保存Wi-Fi密码
   const saveWifiPassword = async (ssid: string, password: string) => {
     try {
-      const newPasswords = { ...savedWifiPasswords, [ssid]: password };
+      const latestSavedPasswordsValue = await wifiPasswordsStorage.getItem();
+      let latestSavedPasswords: { [ssid: string]: string } = {};
+      if (latestSavedPasswordsValue) {
+        try {
+          latestSavedPasswords = JSON.parse(latestSavedPasswordsValue);
+        } catch {
+          console.warn('Saved WiFi passwords are invalid, replacing stored value');
+        }
+      }
+
+      const newPasswords = { ...latestSavedPasswords, [ssid]: password };
       await wifiPasswordsStorage.setItem(JSON.stringify(newPasswords));
       setSavedWifiPasswords(newPasswords);
+      return true;
     } catch (error) {
       console.error('saveWifiPassword error', error);
+      return false;
     }
   };
 
@@ -189,34 +204,21 @@ export const Header = () => {
       eventBus.unsubscribe(eventBusKey.WifiEvent, handleWifiEvent);
     };
   }, []);
-  useEffect(() => {
-    if (isLoginPage) {
+
+  const showRobotWifiPrompt = () => {
+    if (isLoginPage || hasShownRobotWifiPromptRef.current) {
       return;
     }
 
-    if (currentWifiSSID === null) {
-      return;
-    }
-
-    if (isRobotWifiSSID(currentWifiSSID)) {
-      hasShownRobotWifiReminderRef.current = false;
-      return;
-    }
-
-    if (hasShownRobotWifiReminderRef.current) {
-      return;
-    }
-
-    hasShownRobotWifiReminderRef.current = true;
+    hasShownRobotWifiPromptRef.current = true;
     showNotifier({
       title: t('wifi.connectRobotWifiReminderTitle'),
       message: t('wifi.connectRobotWifiReminderMessage'),
       type: 'info',
       duration: 5000,
-      onPress: () => {},
+      onPress: () => { },
     });
-  }, [currentWifiSSID, isLoginPage, t]);
-
+  };
 
   // 定期检查WiFi连接状态
   useEffect(() => {
@@ -224,10 +226,18 @@ export const Header = () => {
 
     const checkWifiStatus = async () => {
       try {
+        if (wifiConnecting) {
+          return;
+        }
+
         const currentSSID = (await WifiManager.getCurrentWifiSSID()) || '';
         setCurrentWifiSSID(currentSSID);
         const previousSSID = robotStatus.currentConnectWifiSSID;
         const currentIsRobotWifi = isRobotWifiSSID(currentSSID);
+
+        if (currentIsRobotWifi) {
+          hasShownRobotWifiPromptRef.current = false;
+        }
 
         // 如果之前有连接的WiFi，但现在获取不到SSID，说明断联了
         if (previousSSID && !currentIsRobotWifi) {
@@ -255,6 +265,9 @@ export const Header = () => {
             currentConnectWifiSSID: currentSSID,
           });
         }
+        else if (!previousSSID && !currentIsRobotWifi) {
+          showRobotWifiPrompt();
+        }
       } catch (error) {
         console.error('checkWifiStatus error', error);
       }
@@ -274,7 +287,7 @@ export const Header = () => {
         clearInterval(wifiCheckInterval);
       }
     };
-  }, [isLoginPage, robotStatus.currentConnectWifiSSID]);
+  }, [isLoginPage, robotStatus.currentConnectWifiSSID, wifiConnecting]);
 
   // 处理WiFi断联的统一逻辑
   const handleWifiDisconnected = (reason: string) => {
@@ -290,13 +303,7 @@ export const Header = () => {
     setWifiList([]);
 
     // 显示断联提示
-    showNotifier({
-      title: `${reason}`,
-      message: t('wifi.reconnectWifi'),
-      type: 'error',
-      duration: 3000,
-      onPress: () => { },
-    });
+    showRobotWifiPrompt();
 
     // 如果有之前连接的WiFi，记录日志
     if (previousSSID) {
@@ -335,18 +342,18 @@ export const Header = () => {
         currentConnectWifiPassword: savedPassword,
       });
 
-      GlobalActivityIndicatorManager.current?.hide();
+      await delayed(200);
+      const robotConnected = await handleConnectToSocketAgain();
+
       showNotifier({
-        title: `${t('wifi.autoReconnect')} ${ssid} ${t('common.success')}`,
-        type: 'success',
-        duration: 3000,
+        title: robotConnected
+          ? `${t('wifi.autoReconnect')} ${ssid} ${t('common.success')}`
+          : t('errors.robotUnconnectedTips'),
+        message: robotConnected ? '' : `${ssid} / TCP 8080`,
+        type: robotConnected ? 'success' : 'error',
+        duration: robotConnected ? 3000 : 5000,
         onPress: () => { },
       });
-
-      // 重新连接socket
-      setTimeout(() => {
-        handleConnectToSocketAgain();
-      }, 200);
     } catch (error) {
       console.error('autoReconnectWifi error', error);
       GlobalActivityIndicatorManager.current?.hide();
@@ -367,16 +374,21 @@ export const Header = () => {
 
   // 获取WiFi权限
   const getWifiPermission = async (): Promise<boolean> => {
-    const granted = await PermissionsAndroid.request(
+    if (Platform.OS !== 'android') {
+      return true;
+    }
+
+    const requiredPermissions = [
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: t('wifi.wifiPermissionTitle'),
-        message: t('wifi.needLocationPermission'),
-        buttonNegative: t('common.reject'),
-        buttonPositive: t('common.allow'),
-      }
+      ...(Number(Platform.Version) >= 33
+        ? [PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES]
+        : []),
+    ];
+
+    const permissionResults = await PermissionsAndroid.requestMultiple(requiredPermissions);
+    return requiredPermissions.every(
+      (permission) => permissionResults[permission] === PermissionsAndroid.RESULTS.GRANTED
     );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
   };
 
   // 打开WiFi设置
@@ -411,33 +423,38 @@ export const Header = () => {
 
   // 获取当前连接的WiFi SSID
   const fetchCurrentConnectWifiSSID = async () => {
-    const connectedWifiSSID = (await WifiManager.getCurrentWifiSSID()) || '';
-    setCurrentWifiSSID(connectedWifiSSID);
+    try {
+      const connectedWifiSSID = (await WifiManager.getCurrentWifiSSID()) || '';
+      setCurrentWifiSSID(connectedWifiSSID);
 
-    if (isLoginPage) {
-      return;
-    }
+      if (isLoginPage) {
+        return;
+      }
 
-    if (isRobotWifiSSID(connectedWifiSSID)) {
+      if (isRobotWifiSSID(connectedWifiSSID)) {
+        setRobotStatus({
+          currentConnectWifiSSID: connectedWifiSSID,
+        });
+        return;
+      }
+
       setRobotStatus({
-        currentConnectWifiSSID: connectedWifiSSID,
+        currentConnectWifiSSID: '',
       });
-      return;
+    } catch (error) {
+      console.warn('Unable to read system primary WiFi SSID', error);
     }
-
-    setRobotStatus({
-      currentConnectWifiSSID: '',
-    });
   };
 
-  const handleConnectToSocketAgain = async () => {
+  const handleConnectToSocketAgain = async (): Promise<boolean> => {
     GlobalActivityIndicatorManager.current?.show(t('wifi.reconnecting'), 0);
 
-    await delayed(2000);
-
-    globalGetConnect();
-
-    GlobalActivityIndicatorManager.current?.hide();
+    try {
+      await delayed(2000);
+      return await globalGetConnect(true);
+    } finally {
+      GlobalActivityIndicatorManager.current?.hide();
+    }
   };
 
   const renderBatteryIcon = () => {
@@ -453,6 +470,36 @@ export const Header = () => {
   };
 
   // 智能WiFi扫描策略 - 使用可配置缓存
+  const getRobotWifiList = (entries: WifiEntry[]) => {
+    const uniqueSSIDs = new Map<string, WifiEntry>();
+
+    entries.forEach((wifi) => {
+      if (
+        wifi.SSID &&
+        wifi.SSID !== '(hidden SSID)' &&
+        wifi.SSID.indexOf(GlobalConst.wifiName) > -1
+      ) {
+        const existing = uniqueSSIDs.get(wifi.SSID);
+        if (!existing || wifi.level > existing.level) {
+          uniqueSSIDs.set(wifi.SSID, wifi);
+        }
+      }
+    });
+
+    return Array.from(uniqueSSIDs.values())
+      .sort((a, b) => b.level - a.level)
+      .slice(0, 5);
+  };
+
+  const applyRobotWifiList = (entries: WifiEntry[]) => {
+    const filteredWifiList = getRobotWifiList(entries);
+    if (filteredWifiList.length > 0) {
+      setWifiList(filteredWifiList);
+      return true;
+    }
+    return false;
+  };
+
   const handleRefreshWifiList = async (type: 'auto' | 'manual' = 'auto') => {
     if (type === 'manual') {
       GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 1500);
@@ -464,7 +511,7 @@ export const Header = () => {
       if (type === 'auto') {
         // 自动模式：优先使用缓存
         const cachedData = getCachedWifiData();
-        if (cachedData && cachedData.length > 0) {
+        if (cachedData && getRobotWifiList(cachedData).length > 0) {
           loadWifiList = cachedData;
         } else {
           // 缓存无效，获取系统缓存
@@ -474,9 +521,42 @@ export const Header = () => {
           }
         }
       } else {
+        try {
+          const systemWifiList = await WifiManager.loadWifiList();
+          if (Array.isArray(systemWifiList) && systemWifiList.length > 0) {
+            updateWifiCache(systemWifiList, 'system');
+            if (applyRobotWifiList(systemWifiList)) {
+              console.log('[ROBOT_WIFI_SCAN] displayed system scan results before forced scan');
+            }
+          }
+        } catch (error) {
+          console.warn('[ROBOT_WIFI_SCAN] unable to load system scan results', error);
+        }
+
         // 手动模式：尝试强制扫描，失败则使用最佳缓存
         try {
-          loadWifiList = await WifiManager.reScanAndLoadWifiList();
+          const forcedScanPromise = WifiManager.reScanAndLoadWifiList();
+          const forcedScanResult = await Promise.race<WifiEntry[] | null>([
+            forcedScanPromise,
+            delayed(5000).then(() => null),
+          ]);
+
+          if (forcedScanResult === null) {
+            console.warn('[ROBOT_WIFI_SCAN] forced scan is slow; showing available system results');
+            loadWifiList = await WifiManager.loadWifiList();
+            void forcedScanPromise
+              .then((lateWifiList) => {
+                if (Array.isArray(lateWifiList) && lateWifiList.length > 0) {
+                  updateWifiCache(lateWifiList, 'force');
+                  applyRobotWifiList(lateWifiList);
+                }
+              })
+              .catch((error) => {
+                console.warn('[ROBOT_WIFI_SCAN] late forced scan failed', error);
+              });
+          } else {
+            loadWifiList = forcedScanResult;
+          }
 
           if (loadWifiList && loadWifiList.length > 0) {
             updateWifiCache(loadWifiList, 'force');
@@ -601,7 +681,11 @@ export const Header = () => {
     setSavedPasswordDialogVisible(false);
     const savedPassword = savedWifiPasswords[currentSelectedWifi.current];
 
-    await connectToWifi(savedPassword);
+    const connected = await connectToWifi(savedPassword);
+    if (!connected) {
+      setWifiPassword('');
+      setWifiPasswordDialogVisible(true);
+    }
   };
 
   // 使用新密码连接
@@ -616,10 +700,23 @@ export const Header = () => {
       return;
     }
 
-    await connectToWifi(wifiPassword);
+    const selectedSSID = currentSelectedWifi.current;
+    const enteredPassword = wifiPassword;
+    const connected = await connectToWifi(enteredPassword);
+    if (!connected) {
+      return;
+    }
 
-    // 保存密码到存储
-    saveWifiPassword(currentSelectedWifi.current, wifiPassword);
+    // 仅在确认连接成功后保存密码
+    const passwordSaved = await saveWifiPassword(selectedSSID, enteredPassword);
+    if (!passwordSaved) {
+      showNotifier({
+        title: 'WiFi 已连接，但密码保存失败',
+        type: 'warning',
+        duration: 3000,
+        onPress: () => { },
+      });
+    }
 
     // 清空密码输入框
     setWifiPassword('');
@@ -634,40 +731,92 @@ export const Header = () => {
 
   // 连接到WiFi的核心逻辑
   const connectToWifi = async (password: string) => {
+    const selectedSSID = currentSelectedWifi.current;
+
     try {
+      if (wifiConnecting) {
+        return false;
+      }
+
+      setWifiConnecting(true);
+
+      const hasPermission = await getWifiPermission();
+      if (!hasPermission) {
+        throw new Error('缺少位置或附近 WiFi 权限');
+      }
+
       setWifiChooseListVisible(false);
       GlobalActivityIndicatorManager.current?.show(
-        `${t('common.connecting')} ${currentSelectedWifi.current}...`,
+        `${t('common.connecting')} ${selectedSSID}...`,
         0
       );
 
-      await WifiManager.connectToProtectedSSID(currentSelectedWifi.current, password, true, false);
-
-      showNotifier({
-        title: t('wifi.connectSuccess'),
-        type: 'success',
-        duration: 3000,
-        onPress: () => { },
+      const selectedWifi = wifiList.find((wifi) => wifi.SSID === selectedSSID);
+      console.log('[WIFI_CONNECT]', {
+        ssid: selectedSSID,
+        capabilities: selectedWifi?.capabilities,
+        level: selectedWifi?.level,
       });
 
+      let isAlreadyConnectedToSelectedWifi = false;
+      try {
+        const systemSSID = normalizeWifiSSID((await WifiManager.getCurrentWifiSSID()) || '');
+        isAlreadyConnectedToSelectedWifi = systemSSID === normalizeWifiSSID(selectedSSID);
+      } catch (error) {
+        console.warn('[WIFI_CURRENT_SSID_CHECK_FAILED]', error);
+      }
+
+      if (isAlreadyConnectedToSelectedWifi) {
+        console.log('[WIFI_ALREADY_CONNECTED]', { ssid: selectedSSID });
+      } else {
+        await WifiManager.connectToProtectedSSID(selectedSSID, password, true, false);
+      }
+
+      setCurrentWifiSSID(selectedSSID);
       setRobotStatus({
-        currentConnectWifiSSID: currentSelectedWifi.current,
+        currentConnectWifiSSID: selectedSSID,
         currentConnectWifiPassword: password,
       });
 
-      setTimeout(() => {
-        // 重新连接socket
-        handleConnectToSocketAgain();
-      }, 200);
-    } catch (error) {
-      console.error('connectToWifi error', error);
-      GlobalActivityIndicatorManager.current?.hide();
+      await delayed(200);
+      const robotConnected = await handleConnectToSocketAgain();
+
       showNotifier({
-        title: t('wifi.connectFailed'),
-        type: 'error',
-        duration: 3000,
+        title: robotConnected
+          ? `${t('wifi.connectSuccess')}: ${selectedSSID}`
+          : t('errors.robotUnconnectedTips'),
+        message: robotConnected ? '' : `${selectedSSID} / TCP 8080`,
+        type: robotConnected ? 'success' : 'error',
+        duration: robotConnected ? 3000 : 5000,
         onPress: () => { },
       });
+
+      return true;
+    } catch (error: any) {
+      console.error('connectToWifi error', error);
+      GlobalActivityIndicatorManager.current?.hide();
+
+      const errorMessages: Record<string, string> = {
+        didNotFindNetwork:
+          'Android 未批准或无法满足本次 ESP WiFi 连接请求，请确认系统连接弹窗并重试',
+        authenticationErrorOccurred: 'WiFi 密码错误，请重新输入',
+        timeoutOccurred: '连接 ESP WiFi 超时，请靠近设备后重试',
+        locationPermissionMissing: '缺少位置或附近 WiFi 权限',
+        locationServicesOff: '请先打开系统定位服务',
+        android10ImmediatelyDroppedConnection: '系统在连接后立即断开了 ESP WiFi',
+        unableToConnect: '系统无法连接到该 ESP WiFi',
+      };
+
+      showNotifier({
+        title: t('wifi.connectFailed'),
+        message: errorMessages[error?.code] || error?.message || '未知错误',
+        type: 'error',
+        duration: 5000,
+        onPress: () => { },
+      });
+      return false;
+    } finally {
+      setWifiConnecting(false);
     }
   };
 
@@ -845,14 +994,18 @@ export const Header = () => {
             <TextInput
               placeholder={t('wifi.inputWifiPassword')}
               value={wifiPassword}
+              secureTextEntry
               onChangeText={setWifiPassword}
             />
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={hideWifiPasswordDialog}>
+            <Button disabled={wifiConnecting} onPress={hideWifiPasswordDialog}>
               <Text>{t('common.cancel')}</Text>
             </Button>
-            <Button onPress={connectWithNewPassword}>
+            <Button
+              loading={wifiConnecting}
+              disabled={wifiConnecting}
+              onPress={connectWithNewPassword}>
               <Text>{t('common.connect')}</Text>
             </Button>
           </Dialog.Actions>
