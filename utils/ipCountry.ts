@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type IpCountryPayload = 'China' | 'Board';
+export type IpCountryPayload = 'China' | 'Global';
 
 const IP_COUNTRY_STORAGE_KEY = 'ip_country_payload';
 
@@ -12,7 +12,7 @@ export const getCountryPayloadFromIpInfo = (country?: string, countryCode?: stri
     return 'China';
   }
 
-  return 'Board';
+  return 'Global';
 };
 
 export const saveIpCountryPayload = async (payload: IpCountryPayload) => {
@@ -22,8 +22,14 @@ export const saveIpCountryPayload = async (payload: IpCountryPayload) => {
 export const getSavedIpCountryPayload = async (): Promise<IpCountryPayload | null> => {
   const payload = await AsyncStorage.getItem(IP_COUNTRY_STORAGE_KEY);
 
-  if (payload === 'China' || payload === 'Board') {
+  if (payload === 'China' || payload === 'Global') {
     return payload;
+  }
+
+  // Migrate the country value saved by older app versions.
+  if (payload === 'Board') {
+    await AsyncStorage.setItem(IP_COUNTRY_STORAGE_KEY, 'Global');
+    return 'Global';
   }
 
   return null;

@@ -21,6 +21,8 @@ import { Header } from '@/components/header';
 import { storage_config } from '@/constants';
 import i18n from '@/i18n/i18n';
 import useStore from '@/store';
+import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
+import { clearOnlineLoginAt } from '@/utils/loginSession';
 import { SocketManage } from '@/utils/socketManage';
 
 export default function () {
@@ -60,7 +62,12 @@ export default function () {
 
   const logout = async () => {
     SocketManage.getInstance().disconnectSocket();
-    await userInfo.removeItem();
+    try {
+      await releaseEspWifiFromSystem();
+    } catch (error) {
+      console.warn('releaseEspWifiFromSystem error', error);
+    }
+    await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
     router.dismissAll();
     router.replace('/(root)/(login)');
   };

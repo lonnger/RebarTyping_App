@@ -40,6 +40,7 @@ import { requestEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 
 // Wi-Fi 密码存储键
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
+const WIFI_FORCE_SCAN_COOLDOWN_MS = 30_000;
 
 export const Header = () => {
   const { top } = useSafeAreaInsets();
@@ -63,11 +64,14 @@ export const Header = () => {
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
   const [currentWifiSSID, setCurrentWifiSSID] = useState<string | null>(null);
   const hasShownRobotWifiPromptRef = useRef(false);
+  const wifiRefreshInFlightRef = useRef(false);
+  const lastForcedWifiScanAtRef = useRef(0);
 
   const { width } = Dimensions.get('screen');
   // 当前选择的WiFi SSID, 用于连接WiFi中间临时存储
   const currentSelectedWifi = useRef<string>('');
-  const isRobotWifiSSID = (ssid: string) => ssid.indexOf(GlobalConst.wifiName) > -1;
+  const isRobotWifiSSID = (ssid: string) =>
+    normalizeWifiSSID(ssid).startsWith(GlobalConst.wifiName);
   const normalizeWifiSSID = (ssid: string) => ssid.replace(/^"|"$/g, '');
   const getSavedRobotWifiPassword = () => {
     return Object.entries(savedWifiPasswords).find(([ssid]) =>
@@ -100,6 +104,7 @@ export const Header = () => {
     if (!wifiCache) return null;
 
     const { data, timestamp, source } = wifiCache;
+    if (!Array.isArray(data)) return null;
 
     if (ignoreAge) return data;
 
@@ -127,6 +132,11 @@ export const Header = () => {
 
   // 更新WiFi缓存
   const updateWifiCache = (data: WifiEntry[], source: 'system' | 'force' | 'background') => {
+    if (!Array.isArray(data)) {
+      console.warn('[ROBOT_WIFI_CACHE] ignored non-array scan result', data);
+      return;
+    }
+
     const newCache = {
       data,
       timestamp: Date.now(),
@@ -305,9 +315,6 @@ export const Header = () => {
     setRobotStatus({
       currentConnectWifiSSID: '',
     });
-
-    // 清空WiFi列表，强制用户重新搜索
-    setWifiList([]);
 
     // 显示断联提示
     showRobotWifiPrompt();
@@ -519,21 +526,14 @@ export const Header = () => {
         return;
       }
 
-      if (Platform.OS === 'android' && Number(Platform.Version) >= 29) {
-        const savedRobotWifiPassword = getSavedRobotWifiPassword();
-        if (savedRobotWifiPassword) {
-          await connectToSystemEspWifi(savedRobotWifiPassword);
-        } else {
-          setWifiPassword('');
-          setEspSystemPasswordDialogVisible(true);
-        }
-        return;
+      const cachedWifiList = getCachedWifiData(true);
+      if (cachedWifiList) {
+        applyRobotWifiList(cachedWifiList);
       }
-
       setWifiChooseListVisible(true);
 
-      // 使用缓存系统进行初始加载
-      await handleRefreshWifiList('auto');
+      // Show cached results immediately, then synchronize with a fresh system scan.
+      void handleRefreshWifiList('open');
     } catch (error: any) {
       console.error('打开WiFi设置失败:', error?.message || 'Unknown error');
       showNotifier({
@@ -594,14 +594,15 @@ export const Header = () => {
   };
 
   // 智能WiFi扫描策略 - 使用可配置缓存
-  const getRobotWifiList = (entries: WifiEntry[]) => {
+  const getRobotWifiList = (entries?: WifiEntry[] | null) => {
     const uniqueSSIDs = new Map<string, WifiEntry>();
+    const normalizedEntries = Array.isArray(entries) ? entries : [];
 
-    entries.forEach((wifi) => {
+    normalizedEntries.forEach((wifi) => {
       if (
         wifi.SSID &&
         wifi.SSID !== '(hidden SSID)' &&
-        wifi.SSID.indexOf(GlobalConst.wifiName) > -1
+        normalizeWifiSSID(wifi.SSID).startsWith(GlobalConst.wifiName)
       ) {
         const existing = uniqueSSIDs.get(wifi.SSID);
         if (!existing || wifi.level > existing.level) {
@@ -615,7 +616,7 @@ export const Header = () => {
       .slice(0, 5);
   };
 
-  const applyRobotWifiList = (entries: WifiEntry[]) => {
+  const applyRobotWifiList = (entries?: WifiEntry[] | null) => {
     const filteredWifiList = getRobotWifiList(entries);
     if (filteredWifiList.length > 0) {
       setWifiList(filteredWifiList);
@@ -624,12 +625,19 @@ export const Header = () => {
     return false;
   };
 
-  const handleRefreshWifiList = async (type: 'auto' | 'manual' = 'auto') => {
+  const handleRefreshWifiList = async (type: 'auto' | 'open' | 'manual' = 'auto') => {
+    if (wifiRefreshInFlightRef.current) {
+      console.log('[ROBOT_WIFI_SCAN] refresh already in progress');
+      return;
+    }
+    wifiRefreshInFlightRef.current = true;
+
     if (type === 'manual') {
       GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 1500);
     }
 
     let loadWifiList: WifiEntry[] = [];
+    let latestSystemWifiList: WifiEntry[] = [];
 
     try {
       if (type === 'auto') {
@@ -648,6 +656,7 @@ export const Header = () => {
         try {
           const systemWifiList = await WifiManager.loadWifiList();
           if (Array.isArray(systemWifiList) && systemWifiList.length > 0) {
+            latestSystemWifiList = systemWifiList;
             updateWifiCache(systemWifiList, 'system');
             if (applyRobotWifiList(systemWifiList)) {
               console.log('[ROBOT_WIFI_SCAN] displayed system scan results before forced scan');
@@ -656,6 +665,13 @@ export const Header = () => {
         } catch (error) {
           console.warn('[ROBOT_WIFI_SCAN] unable to load system scan results', error);
         }
+
+        const timeSinceLastForcedScan = Date.now() - lastForcedWifiScanAtRef.current;
+        if (timeSinceLastForcedScan < WIFI_FORCE_SCAN_COOLDOWN_MS) {
+          console.log('[ROBOT_WIFI_SCAN] active scan skipped during Android cooldown');
+          return;
+        }
+        lastForcedWifiScanAtRef.current = Date.now();
 
         // 手动模式：尝试强制扫描，失败则使用最佳缓存
         try {
@@ -678,8 +694,20 @@ export const Header = () => {
               .catch((error) => {
                 console.warn('[ROBOT_WIFI_SCAN] late forced scan failed', error);
               });
-          } else {
+          } else if (Array.isArray(forcedScanResult)) {
             loadWifiList = forcedScanResult;
+          } else {
+            console.warn(
+              '[ROBOT_WIFI_SCAN] forced scan was throttled or returned an invalid result; keeping existing list',
+              forcedScanResult
+            );
+            const cachedData = getCachedWifiData(true);
+            loadWifiList =
+              latestSystemWifiList.length > 0
+                ? latestSystemWifiList
+                : Array.isArray(cachedData)
+                  ? cachedData
+                  : [];
           }
 
           if (loadWifiList && loadWifiList.length > 0) {
@@ -724,7 +752,7 @@ export const Header = () => {
         if (
           wifi.SSID &&
           wifi.SSID !== '(hidden SSID)' &&
-          wifi.SSID.indexOf(GlobalConst.wifiName) > -1
+          normalizeWifiSSID(wifi.SSID).startsWith(GlobalConst.wifiName)
         ) {
           const existing = uniqueSSIDs.get(wifi.SSID);
           if (!existing || wifi.level > existing.level) {
@@ -737,6 +765,15 @@ export const Header = () => {
         .sort((a, b) => b.level - a.level)
         .slice(0, 5);
 
+      if (filteredWifiList.length === 0 && type === 'manual') {
+        showNotifier({
+          title: t('wifi.noWifiList'),
+          type: 'error',
+          duration: 3000,
+          onPress: () => { },
+        });
+      }
+
       if (filteredWifiList.length > 0) {
         setWifiList(filteredWifiList);
       } else {
@@ -747,15 +784,6 @@ export const Header = () => {
           }
           return [];
         });
-
-        if (type === 'manual') {
-          showNotifier({
-            title: t('wifi.noWifiList'),
-            type: 'error',
-            duration: 3000,
-            onPress: () => { },
-          });
-        }
       }
     } catch (error) {
       console.error(t('wifi.wifiGetFailed'), error);
@@ -775,6 +803,8 @@ export const Header = () => {
           onPress: () => { },
         });
       }
+    } finally {
+      wifiRefreshInFlightRef.current = false;
     }
   };
 

@@ -23,15 +23,43 @@ import WifiManager, { WifiEntry } from 'react-native-wifi-reborn';
 import { Header } from '@/components/header';
 import { GlobalConst, storage_config } from '@/constants';
 import useStore from '@/store';
+import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 import {
   getCountryPayloadFromIpInfo,
   getSavedIpCountryPayload,
   saveIpCountryPayload,
 } from '@/utils/ipCountry';
+import { saveOnlineLoginAt } from '@/utils/loginSession';
 import { showNotifier } from '@/utils/notifier';
-import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
+const IP_LOCATION_REQUEST_TIMEOUT_MS = 10_000;
+const IP_LOCATION_ENDPOINTS = [
+  {
+    name: 'ipwho.is',
+    url: 'https://ipwho.is/?fields=success,message,country,country_code,latitude,longitude',
+    normalize: (data: Record<string, any>) => ({
+      success: data.success === true,
+      message: data.message,
+      country: data.country,
+      countryCode: data.country_code,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    }),
+  },
+  {
+    name: 'api.ip.sb',
+    url: 'https://api.ip.sb/geoip',
+    normalize: (data: Record<string, any>) => ({
+      success: true,
+      message: data.message,
+      country: data.country,
+      countryCode: data.country_code,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    }),
+  },
+];
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -63,8 +91,11 @@ export default function Login() {
       .catch((error) => {
         console.warn('releaseEspWifiFromSystem error', error);
       })
-      .finally(() => {
-        void fetchCurrentInternetWifiSSID();
+      .finally(async () => {
+        const hasPermission = await requestWifiPermission();
+        if (hasPermission) {
+          await fetchCurrentInternetWifiSSID();
+        }
       });
   }, []);
 
@@ -74,16 +105,15 @@ export default function Login() {
         return;
       }
 
-      await fetchCurrentInternetWifiSSID();
-
-      if (!internetWifiVisible) {
-        return;
-      }
-
       const hasPermission = await checkWifiPermission();
       if (!hasPermission) {
         clearInternetWifiList();
-      } else {
+        return;
+      }
+
+      await fetchCurrentInternetWifiSSID();
+
+      if (internetWifiVisible) {
         refreshInternetWifiList(false);
       }
     });
@@ -144,6 +174,19 @@ export default function Login() {
       console.error('getSavedIpCountryPayload error', error);
     }
     if (!savedIpCountry) {
+      showNotifier({
+        title: t('errors.networkLoginRequired'),
+        type: 'error',
+        duration: 5000,
+        onPress: () => {},
+      });
+      return;
+    }
+
+    try {
+      await saveOnlineLoginAt();
+    } catch (error) {
+      console.error('saveOnlineLoginAt error', error);
       showNotifier({
         title: t('errors.networkLoginRequired'),
         type: 'error',
@@ -216,7 +259,19 @@ export default function Login() {
       return true;
     }
 
-    return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+    const hasFineLocationPermission = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+    );
+
+    if (Number(Platform.Version) < 33) {
+      return hasFineLocationPermission;
+    }
+
+    const hasNearbyWifiPermission = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES
+    );
+
+    return hasFineLocationPermission && hasNearbyWifiPermission;
   };
 
   const requestWifiPermission = async () => {
@@ -229,17 +284,16 @@ export default function Login() {
       return true;
     }
 
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: t('wifi.wifiPermissionTitle'),
-        message: t('wifi.needLocationPermission'),
-        buttonNegative: t('common.reject'),
-        buttonPositive: t('common.allow'),
-      }
-    );
+    const requiredPermissions = [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+    if (Number(Platform.Version) >= 33) {
+      requiredPermissions.push(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES);
+    }
 
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
+    const permissionResults = await PermissionsAndroid.requestMultiple(requiredPermissions);
+
+    return requiredPermissions.every(
+      (permission) => permissionResults[permission] === PermissionsAndroid.RESULTS.GRANTED
+    );
   };
 
   const fetchCurrentInternetWifiSSID = async () => {
@@ -346,6 +400,10 @@ export default function Login() {
   };
 
   const handleInternetWifiSelect = (ssid: string) => {
+    if (Platform.OS === 'android') {
+      return;
+    }
+
     currentSelectedWifi.current = ssid;
 
     if (savedWifiPasswords[ssid]) {
@@ -376,6 +434,10 @@ export default function Login() {
   };
 
   const connectToInternetWifi = async (passwordValue: string, shouldSavePassword: boolean) => {
+    if (Platform.OS === 'android') {
+      return;
+    }
+
     try {
       setInternetWifiVisible(false);
       setWifiPasswordDialogVisible(false);
@@ -420,20 +482,43 @@ export default function Login() {
     setLoadingLocation(true);
 
     try {
-      const res = await fetch(
-        'http://ip-api.com/json/?lang=zh-CN&fields=status,message,country,countryCode,regionName,city,district,lat,lon'
-      );
-      const data = await res.json();
+      let lastError: unknown = null;
 
-      if (data.status !== 'success' || !data.lat || !data.lon) {
-        throw new Error(data.message || 'ip-api.com 返回失败');
+      for (const endpoint of IP_LOCATION_ENDPOINTS) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), IP_LOCATION_REQUEST_TIMEOUT_MS);
+
+        try {
+          const response = await fetch(endpoint.url, { signal: controller.signal });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = endpoint.normalize(await response.json());
+          const latitude = Number(data.latitude);
+          const longitude = Number(data.longitude);
+
+          if (
+            !data.success ||
+            (!data.country && !data.countryCode) ||
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude)
+          ) {
+            throw new Error(data.message || 'IP location response is invalid');
+          }
+
+          const countryPayload = getCountryPayloadFromIpInfo(data.country, data.countryCode);
+          await saveIpCountryPayload(countryPayload);
+          return true;
+        } catch (error) {
+          lastError = error;
+          console.warn(`[IP_LOCATION_ENDPOINT_FAILED] ${endpoint.name}`, error);
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
 
-      const countryPayload = getCountryPayloadFromIpInfo(data.country, data.countryCode);
-      await saveIpCountryPayload(countryPayload);
-      return true;
-    } catch (err: any) {
-      console.error('获取 IP 定位失败:', err);
+      console.error('获取 IP 定位失败，所有接口均不可用:', lastError);
       return false;
     } finally {
       ipLocationRequestInFlightRef.current = false;
@@ -504,7 +589,7 @@ export default function Login() {
               </Modal>
 
               <Modal
-                visible={internetWifiVisible}
+                visible={Platform.OS !== 'android' && internetWifiVisible}
                 onDismiss={() => setInternetWifiVisible(false)}
                 contentContainerStyle={{
                   backgroundColor: 'white',
@@ -573,7 +658,7 @@ export default function Login() {
               </Modal>
 
               <Dialog
-                visible={savedPasswordDialogVisible}
+                visible={Platform.OS !== 'android' && savedPasswordDialogVisible}
                 style={{ width: '80%', left: '0%', right: '0%', marginHorizontal: 'auto' }}
                 onDismiss={() => setSavedPasswordDialogVisible(false)}>
                 <Dialog.Title>使用已保存密码?</Dialog.Title>
@@ -595,7 +680,7 @@ export default function Login() {
               </Dialog>
 
               <Dialog
-                visible={wifiPasswordDialogVisible}
+                visible={Platform.OS !== 'android' && wifiPasswordDialogVisible}
                 style={{ width: '80%', left: '0%', right: '0%', marginHorizontal: 'auto' }}
                 onDismiss={() => setWifiPasswordDialogVisible(false)}>
                 <Dialog.Title>输入 WiFi 密码 {currentSelectedWifi.current}</Dialog.Title>

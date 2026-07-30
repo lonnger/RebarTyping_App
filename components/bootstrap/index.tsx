@@ -14,13 +14,18 @@ import { Command } from '@/constants/command';
 import { eventBusKey } from '@/constants/event';
 import database from '@/model/manager';
 import useStore from '@/store';
+import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
 import { ConnectDeviceInfo } from '@/utils/connectDeviceInfo';
+import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 import eventBus from '@/utils/eventBus';
 import { delayed, globalGetConnect, sendCmdDispatch } from '@/utils/helper';
+import {
+  clearOnlineLoginAt,
+  getOnlineLoginSessionStatus,
+} from '@/utils/loginSession';
 import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
 import { printTerminalLogo } from '@/utils/terminalLog';
-import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
 // 这个组件主要做一些初始化功能
 export const Bootstrap = () => {
   //新增一个状态来控制枪口错误提示的频率，避免短时间内多次触发
@@ -29,6 +34,7 @@ export const Bootstrap = () => {
     isActive: false,
     lastShownAt: 0,
   });
+  const sessionRedirectingRef = useRef(false);
   //读取本地存储中的用户信息
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
   const { setCanLoginInfo, canLoginInfo, robotStatus, setRobotStatus, setDebugLog } = useStore(
@@ -121,9 +127,6 @@ export const Bootstrap = () => {
       // active 相当于 Flutter 中的 resumed - 应用在前台可见且活跃
       case 'active':
         console.log('应用回到前台，恢复心跳和连接');
-        // 恢复心跳
-        // socket.resumeHeartbeat();
-        // 检查连接状态并重连
         restartConnect();
         break;
 
@@ -240,6 +243,14 @@ export const Bootstrap = () => {
       const getUserInfoFromStorage = await userInfo.getItem();
       if (!getUserInfoFromStorage || getUserInfoFromStorage === null) {
         router.replace('/(login)');
+        return;
+      }
+
+      const sessionStatus = await getOnlineLoginSessionStatus();
+      if (sessionStatus.expired) {
+        console.log('[ONLINE_LOGIN_SESSION_EXPIRED]', sessionStatus);
+        await redirectToLoginAfterSessionExpired();
+        return;
       }
 
       if (getUserInfoFromStorage && getUserInfoFromStorage !== '') {
@@ -255,6 +266,30 @@ export const Bootstrap = () => {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const redirectToLoginAfterSessionExpired = async () => {
+    if (sessionRedirectingRef.current) {
+      return;
+    }
+
+    sessionRedirectingRef.current = true;
+    SocketManage.getInstance().disconnectSocket();
+
+    try {
+      await releaseEspWifiFromSystem();
+    } catch (error) {
+      console.warn('releaseEspWifiFromSystem error', error);
+    }
+
+    await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
+    router.replace('/(root)/(login)');
+    showNotifier({
+      title: t('errors.sessionExpired'),
+      type: 'info',
+      duration: 5000,
+      onPress: () => {},
+    });
   };
 
   const databaseInit = async () => {

@@ -138,6 +138,7 @@
   "errors": {
     "emptyCredentials": "用户名和密码不能为空",
     "networkLoginRequired": "登录失败，请联网登录",
+    "sessionExpired": "登录已超过30分钟，请联网重新登录",
     "invalidCredentials": "用户名或密码错误",
     "readManual": "请先阅读用户手册并知悉该手册",
     "wifiPermission": "位置权限是连接WiFi的必要条件",

@@ -462,7 +462,7 @@ export class SocketManage {
   }
 
   private async handleCountryResponse(eventData: string) {
-    const match = /^up:country[:=](china|board)$/i.exec(eventData.trim());
+    const match = /^up:country[:=](china|global|board)$/i.exec(eventData.trim());
     if (!match || this.countryVerificationHandled || this.countryResponseHandling) {
       return;
     }
@@ -471,7 +471,8 @@ export class SocketManage {
     this.stopCountryQuery();
     const verificationGeneration = this.countryVerificationGeneration;
 
-    const boardCountry = match[1].toLowerCase();
+    // Older controllers return Board; it has the same meaning as Global.
+    const boardCountry = match[1].toLowerCase() === 'board' ? 'global' : match[1].toLowerCase();
     let savedCountry: string | null = null;
 
     try {
