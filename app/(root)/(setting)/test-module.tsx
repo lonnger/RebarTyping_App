@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { View, ScrollView, FlatList, Text } from 'react-native';
 import { Button, Card, Dialog, Icon, Portal } from 'react-native-paper';
 
@@ -12,6 +12,12 @@ import { GlobalConst } from '@/constants';
 import { Command } from '@/constants/command';
 import useStore from '@/store';
 import { sendCmdDispatch } from '@/utils/helper';
+import {
+  getSavedIpCountryPayload,
+  getSavedIpLocationInfo,
+  IpCountryPayload,
+  IpLocationInfo,
+} from '@/utils/ipCountry';
 import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
 
@@ -29,7 +35,38 @@ export default function TestModule() {
   } = useStore((state) => state);
   const [isShowlog, setIsShowLog] = useState(false);
   const [isShowOldTestModal, setIsShowOldTestModal] = useState(false);
+  const [ipLocationInfo, setIpLocationInfo] = useState<IpLocationInfo | null>(null);
+  const [ipCountryPayload, setIpCountryPayload] = useState<IpCountryPayload | null>(null);
+  const [ipLocationInfoLoaded, setIpLocationInfoLoaded] = useState(false);
   const setDebugLog = useStore((state) => state.setDebugLog);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      setIpLocationInfoLoaded(false);
+
+      Promise.all([getSavedIpLocationInfo(), getSavedIpCountryPayload()])
+        .then(([savedIpLocationInfo, savedIpCountryPayload]) => {
+          if (!isActive) {
+            return;
+          }
+          setIpLocationInfo(savedIpLocationInfo);
+          setIpCountryPayload(savedIpCountryPayload);
+        })
+        .catch((error) => {
+          console.warn('getSavedIpLocationInfo error', error);
+        })
+        .finally(() => {
+          if (isActive) {
+            setIpLocationInfoLoaded(true);
+          }
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   const goback = () => {
     router.back();
@@ -134,6 +171,44 @@ export default function TestModule() {
         onConfirm={onOldTestConfirm}
       />
       <View className="flex min-h-[72%] w-full flex-row flex-wrap px-3">
+        <Card className="mb-5 mr-3 w-full">
+          <View className="flex flex-row items-center px-4 py-3">
+            <Icon source="ip-network" size={20} />
+            <Text className="ml-2 text-lg font-bold">登录 IP 信息</Text>
+          </View>
+          <Card.Content>
+            {!ipLocationInfoLoaded ? (
+              <Text>正在读取……</Text>
+            ) : ipLocationInfo ? (
+              <View className="flex flex-row flex-wrap">
+                <Text className="mb-2 w-1/3" selectable>
+                  公网 IP：{ipLocationInfo.ip}
+                </Text>
+                <Text className="mb-2 w-1/3" selectable>
+                  国家/地区：{ipLocationInfo.country || '-'} ({ipLocationInfo.countryCode || '-'})
+                </Text>
+                <Text className="mb-2 w-1/3" selectable>
+                  数据来源：{ipLocationInfo.source}
+                </Text>
+                <Text className="mb-2 w-1/3" selectable>
+                  区域判定：{ipCountryPayload || '-'}
+                </Text>
+                <Text className="w-1/3" selectable>
+                  纬度：{ipLocationInfo.latitude}
+                </Text>
+                <Text className="w-1/3" selectable>
+                  经度：{ipLocationInfo.longitude}
+                </Text>
+                <Text className="w-1/3" selectable>
+                  获取时间：{new Date(ipLocationInfo.fetchedAt).toLocaleString()}
+                </Text>
+              </View>
+            ) : (
+              <Text>暂无登录 IP 信息，请先在登录页联网登录一次。</Text>
+            )}
+          </Card.Content>
+        </Card>
+
         <Card className=" mb-5 mr-3 w-[40%]" style={{ display: isShowlog ? 'none' : 'flex' }}>
           <Button
             mode="contained"

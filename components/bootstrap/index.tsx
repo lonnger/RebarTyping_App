@@ -22,6 +22,7 @@ import { delayed, globalGetConnect, sendCmdDispatch } from '@/utils/helper';
 import {
   clearOnlineLoginAt,
   getOnlineLoginSessionStatus,
+  ONLINE_LOGIN_VALIDITY_MS,
 } from '@/utils/loginSession';
 import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
@@ -122,17 +123,20 @@ export const Bootstrap = () => {
   }, []);
 
   //handleAppStateChange 处理应用状态变化时的逻辑
-  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
     switch (nextAppState) {
       // active 相当于 Flutter 中的 resumed - 应用在前台可见且活跃
       case 'active':
         console.log('应用回到前台，恢复心跳和连接');
-        restartConnect();
+        if (await checkOnlineLoginValidity()) {
+          await restartConnect();
+        }
         break;
 
       // background 相当于 Flutter 中的 paused - 应用在后台运行
       case 'background':
         console.log('应用进入后台，心跳在后台可能被暂停');
+        await checkOnlineLoginValidity();
         // 注意：React Native 在后台时 setTimeout/setInterval 可能被暂停
         // 但 TCP socket 连接本身会保持
         break;
@@ -169,23 +173,7 @@ export const Bootstrap = () => {
 
       await delayed(2000);
 
-      const store = useStore.getState();
-      const { currentConnectWifiSSID, currentConnectWifiPassword } = store.robotStatus;
-      if (
-        currentConnectWifiSSID.indexOf(GlobalConst.wifiName) > -1 &&
-        currentConnectWifiPassword !== '' &&
-        currentSSID.replace(/^"(.*)"$/, '$1') !==
-          currentConnectWifiSSID.replace(/^"(.*)"$/, '$1')
-      ) {
-        await WifiManager.connectToProtectedSSID(
-          currentConnectWifiSSID,
-          currentConnectWifiPassword,
-          true,
-          false
-        );
-      }
-
-      globalGetConnect();
+      await globalGetConnect();
 
       GlobalActivityIndicatorManager.current?.hide();
 
@@ -238,19 +226,19 @@ export const Bootstrap = () => {
     }
   };
 
-  const checkLogin = async () => {
+  const checkLogin = async (): Promise<boolean> => {
     try {
       const getUserInfoFromStorage = await userInfo.getItem();
       if (!getUserInfoFromStorage || getUserInfoFromStorage === null) {
         router.replace('/(login)');
-        return;
+        return false;
       }
 
       const sessionStatus = await getOnlineLoginSessionStatus();
       if (sessionStatus.expired) {
         console.log('[ONLINE_LOGIN_SESSION_EXPIRED]', sessionStatus);
         await redirectToLoginAfterSessionExpired();
-        return;
+        return false;
       }
 
       if (getUserInfoFromStorage && getUserInfoFromStorage !== '') {
@@ -263,8 +251,31 @@ export const Bootstrap = () => {
           console.log('登录成功');
         }
       }
+      return true;
     } catch (error) {
       console.log(error);
+      return false;
+    }
+  };
+
+  const checkOnlineLoginValidity = async (): Promise<boolean> => {
+    try {
+      const sessionStatus = await getOnlineLoginSessionStatus();
+
+      if (sessionStatus.reason === 'missing') {
+        return false;
+      }
+
+      if (sessionStatus.expired) {
+        console.log('[ONLINE_LOGIN_SESSION_EXPIRED]', sessionStatus);
+        await redirectToLoginAfterSessionExpired();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.log('checkOnlineLoginValidity error', error);
+      return false;
     }
   };
 
@@ -274,22 +285,28 @@ export const Bootstrap = () => {
     }
 
     sessionRedirectingRef.current = true;
-    SocketManage.getInstance().disconnectSocket();
-
     try {
-      await releaseEspWifiFromSystem();
-    } catch (error) {
-      console.warn('releaseEspWifiFromSystem error', error);
-    }
+      SocketManage.getInstance().disconnectSocket();
 
-    await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
-    router.replace('/(root)/(login)');
-    showNotifier({
-      title: t('errors.sessionExpired'),
-      type: 'info',
-      duration: 5000,
-      onPress: () => {},
-    });
+      try {
+        await releaseEspWifiFromSystem();
+      } catch (error) {
+        console.warn('releaseEspWifiFromSystem error', error);
+      }
+
+      await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
+      router.replace('/(root)/(login)');
+      showNotifier({
+        title: t('errors.sessionExpired', {
+          minutes: ONLINE_LOGIN_VALIDITY_MS / 60_000,
+        }),
+        type: 'info',
+        duration: 5000,
+        onPress: () => {},
+      });
+    } finally {
+      sessionRedirectingRef.current = false;
+    }
   };
 
   const databaseInit = async () => {

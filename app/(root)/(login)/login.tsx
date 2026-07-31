@@ -28,6 +28,7 @@ import {
   getCountryPayloadFromIpInfo,
   getSavedIpCountryPayload,
   saveIpCountryPayload,
+  saveIpLocationInfo,
 } from '@/utils/ipCountry';
 import { saveOnlineLoginAt } from '@/utils/loginSession';
 import { showNotifier } from '@/utils/notifier';
@@ -37,10 +38,11 @@ const IP_LOCATION_REQUEST_TIMEOUT_MS = 10_000;
 const IP_LOCATION_ENDPOINTS = [
   {
     name: 'ipwho.is',
-    url: 'https://ipwho.is/?fields=success,message,country,country_code,latitude,longitude',
+    url: 'https://ipwho.is/?fields=success,message,ip,country,country_code,latitude,longitude',
     normalize: (data: Record<string, any>) => ({
       success: data.success === true,
       message: data.message,
+      ip: data.ip,
       country: data.country,
       countryCode: data.country_code,
       latitude: data.latitude,
@@ -53,6 +55,7 @@ const IP_LOCATION_ENDPOINTS = [
     normalize: (data: Record<string, any>) => ({
       success: true,
       message: data.message,
+      ip: data.ip,
       country: data.country,
       countryCode: data.country_code,
       latitude: data.latitude,
@@ -95,6 +98,13 @@ export default function Login() {
         const hasPermission = await requestWifiPermission();
         if (hasPermission) {
           await fetchCurrentInternetWifiSSID();
+        } else {
+          showNotifier({
+            title: t('wifi.ssidPermissionRequired'),
+            type: 'warning',
+            duration: 6000,
+            onPress: () => {},
+          });
         }
       });
   }, []);
@@ -307,6 +317,17 @@ export default function Login() {
 
   const openInternetWifiWindow = async () => {
     if (Platform.OS === 'android') {
+      const hasPermission = await requestWifiPermission();
+      if (!hasPermission) {
+        clearInternetWifiList();
+        showNotifier({
+          title: t('wifi.ssidPermissionRequired'),
+          type: 'warning',
+          duration: 6000,
+          onPress: () => {},
+        });
+      }
+
       try {
         await IntentLauncher.startActivityAsync('android.settings.panel.action.WIFI');
       } catch (error) {
@@ -314,7 +335,9 @@ export default function Login() {
         await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.WIFI_SETTINGS);
       }
 
-      await fetchCurrentInternetWifiSSID();
+      if (hasPermission) {
+        await fetchCurrentInternetWifiSSID();
+      }
       return;
     }
 
@@ -489,7 +512,16 @@ export default function Login() {
         const timeoutId = setTimeout(() => controller.abort(), IP_LOCATION_REQUEST_TIMEOUT_MS);
 
         try {
-          const response = await fetch(endpoint.url, { signal: controller.signal });
+          const separator = endpoint.url.includes('?') ? '&' : '?';
+          const requestUrl = `${endpoint.url}${separator}_=${Date.now()}`;
+          const response = await fetch(requestUrl, {
+            signal: controller.signal,
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store',
+              Pragma: 'no-cache',
+            },
+          });
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
@@ -500,6 +532,7 @@ export default function Login() {
 
           if (
             !data.success ||
+            !data.ip ||
             (!data.country && !data.countryCode) ||
             !Number.isFinite(latitude) ||
             !Number.isFinite(longitude)
@@ -508,7 +541,18 @@ export default function Login() {
           }
 
           const countryPayload = getCountryPayloadFromIpInfo(data.country, data.countryCode);
-          await saveIpCountryPayload(countryPayload);
+          await Promise.all([
+            saveIpCountryPayload(countryPayload),
+            saveIpLocationInfo({
+              ip: data.ip,
+              country: data.country || '',
+              countryCode: data.countryCode || '',
+              latitude,
+              longitude,
+              source: endpoint.name,
+              fetchedAt: Date.now(),
+            }),
+          ]);
           return true;
         } catch (error) {
           lastError = error;

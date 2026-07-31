@@ -119,6 +119,7 @@
     "refreshingWifiList": "正在刷新WiFi列表...",
     "openWifiSettingFailed": "打开WiFi设置失败，请重试",
     "needWifiPermission": "需要WiFi权限才能搜索网络",
+    "ssidPermissionRequired": "请授予位置和附近设备权限，否则WiFi连接受阻",
     "needLocationPermission": "需要位置权限才能搜索网络",
     "autoReconnect": "自动重连",
     "noSavedPassword": "没有找到保存的密码",
@@ -138,7 +139,8 @@
   "errors": {
     "emptyCredentials": "用户名和密码不能为空",
     "networkLoginRequired": "登录失败，请联网登录",
-    "sessionExpired": "登录已超过30分钟，请联网重新登录",
+    "sessionExpired": "登录已超过{{minutes}}分钟，请联网重新登录",
+    "sessionExpiringSoon": "账户使用时限还剩{{minutes}}分钟，请重新登录",
     "invalidCredentials": "用户名或密码错误",
     "readManual": "请先阅读用户手册并知悉该手册",
     "wifiPermission": "位置权限是连接WiFi的必要条件",

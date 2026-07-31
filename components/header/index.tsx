@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WifiManager, { WifiEntry } from 'react-native-wifi-reborn';
 
 import { GlobalActivityIndicatorManager } from '../activity-indicator-global';
+import { SessionExpiryWarning } from '../session-expiry-warning';
 import { GlobalSnackbarManager } from '../snackbar-global';
 
 import { GlobalConst } from '@/constants';
@@ -359,15 +360,6 @@ export const Header = () => {
       await delayed(200);
       const robotConnected = await handleConnectToSocketAgain();
 
-      showNotifier({
-        title: robotConnected
-          ? `${t('wifi.autoReconnect')} ${ssid} ${t('common.success')}`
-          : t('errors.robotUnconnectedTips'),
-        message: robotConnected ? '' : `${ssid} / TCP 8080`,
-        type: robotConnected ? 'success' : 'error',
-        duration: robotConnected ? 3000 : 5000,
-        onPress: () => { },
-      });
     } catch (error) {
       console.error('autoReconnectWifi error', error);
       GlobalActivityIndicatorManager.current?.hide();
@@ -991,14 +983,7 @@ export const Header = () => {
             contentFit="contain"
             transition={1000}
           />
-        <View
-          style={{
-            width: 18,
-            height: 44,
-            marginTop: 0,
-            backgroundColor: '#F5F5F5',
-          }}
-        />
+        <SessionExpiryWarning isLoginPage={isLoginPage} />
         </View>
 
         <View className="flex flex-row items-center gap-2">
