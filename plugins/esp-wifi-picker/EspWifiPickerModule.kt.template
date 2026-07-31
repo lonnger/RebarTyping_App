@@ -29,12 +29,27 @@ class EspWifiPickerModule(
   private val mainHandler = Handler(Looper.getMainLooper())
 
   private var activeCallback: ConnectivityManager.NetworkCallback? = null
+  private var activeNetwork: Network? = null
   private var pendingPromise: Promise? = null
 
   override fun getName(): String = "EspWifiPicker"
 
   @ReactMethod
   fun requestEspWifi(prefix: String, password: String, promise: Promise) {
+    requestEspWifiNetwork(prefix, password, usePrefix = true, promise = promise)
+  }
+
+  @ReactMethod
+  fun connectToEspWifi(ssid: String, password: String, promise: Promise) {
+    requestEspWifiNetwork(ssid, password, usePrefix = false, promise = promise)
+  }
+
+  private fun requestEspWifiNetwork(
+    ssidOrPrefix: String,
+    password: String,
+    usePrefix: Boolean,
+    promise: Promise
+  ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
       promise.reject(
         "ANDROID_VERSION_UNSUPPORTED",
@@ -43,8 +58,8 @@ class EspWifiPickerModule(
       return
     }
 
-    if (prefix.isBlank() || password.isBlank()) {
-      promise.reject("INVALID_ARGUMENT", "WiFi prefix and password are required.")
+    if (ssidOrPrefix.isBlank() || password.isBlank()) {
+      promise.reject("INVALID_ARGUMENT", "WiFi SSID and password are required.")
       return
     }
 
@@ -56,10 +71,18 @@ class EspWifiPickerModule(
     releaseActiveRequest(unbindProcess = true)
 
     try {
-      val specifier = WifiNetworkSpecifier.Builder()
-        .setSsidPattern(PatternMatcher(prefix, PatternMatcher.PATTERN_PREFIX))
+      val specifierBuilder = WifiNetworkSpecifier.Builder()
         .setWpa2Passphrase(password)
-        .build()
+
+      if (usePrefix) {
+        specifierBuilder.setSsidPattern(
+          PatternMatcher(ssidOrPrefix, PatternMatcher.PATTERN_PREFIX)
+        )
+      } else {
+        specifierBuilder.setSsid(ssidOrPrefix)
+      }
+
+      val specifier = specifierBuilder.build()
 
       val request = NetworkRequest.Builder()
         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -74,7 +97,16 @@ class EspWifiPickerModule(
             return
           }
 
-          connectivityManager.bindProcessToNetwork(network)
+          if (!connectivityManager.bindProcessToNetwork(network)) {
+            pendingPromise?.reject(
+              "ESP_WIFI_BIND_FAILED",
+              "Unable to bind the app process to the selected ESP WiFi."
+            )
+            pendingPromise = null
+            releaseActiveRequest(unbindProcess = true)
+            return
+          }
+          activeNetwork = network
 
           // Give Android a short moment to expose the selected SSID to WifiInfo.
           mainHandler.postDelayed({
@@ -127,6 +159,47 @@ class EspWifiPickerModule(
   }
 
   @ReactMethod
+  fun getConnectedEspWifiInfo(promise: Promise) {
+    try {
+      val network = activeNetwork
+      val networkWifiInfo =
+        network?.let {
+          connectivityManager.getNetworkCapabilities(it)?.transportInfo as? WifiInfo
+        }
+      val activeSsid =
+        if (network != null) {
+          getSelectedSsid(network)
+        } else {
+          ""
+        }
+      val currentWifiInfo = wifiManager.connectionInfo
+      val currentSsid = normalizeSsid(currentWifiInfo?.ssid.orEmpty())
+      val wifiInfo =
+        if (activeSsid.isNotBlank() && currentSsid == activeSsid) {
+          // WifiManager.connectionInfo is refreshed by the WiFi service and is
+          // usually more current than the WifiInfo snapshot in NetworkCapabilities.
+          currentWifiInfo
+        } else {
+          networkWifiInfo ?: currentWifiInfo
+        }
+      val ssid = activeSsid.ifBlank { currentSsid }
+
+      if (ssid.isBlank() || wifiInfo == null) {
+        promise.resolve(null)
+        return
+      }
+
+      val result = Arguments.createMap()
+      result.putString("ssid", ssid)
+      result.putInt("rssi", wifiInfo.rssi)
+      result.putDouble("timestamp", System.currentTimeMillis().toDouble())
+      promise.resolve(result)
+    } catch (error: Exception) {
+      promise.reject("ESP_WIFI_INFO_FAILED", error.message, error)
+    }
+  }
+
+  @ReactMethod
   fun releaseEspWifi(promise: Promise) {
     pendingPromise?.reject(
       "ESP_WIFI_RELEASED",
@@ -147,6 +220,10 @@ class EspWifiPickerModule(
       connectivityManager.getNetworkCapabilities(network)?.transportInfo as? WifiInfo
     val rawSsid = networkWifiInfo?.ssid ?: wifiManager.connectionInfo?.ssid.orEmpty()
 
+    return normalizeSsid(rawSsid)
+  }
+
+  private fun normalizeSsid(rawSsid: String): String {
     return rawSsid
       .removePrefix("\"")
       .removeSuffix("\"")
@@ -163,6 +240,7 @@ class EspWifiPickerModule(
       }
     }
     activeCallback = null
+    activeNetwork = null
     pendingPromise = null
 
     if (unbindProcess) {

@@ -16,7 +16,10 @@ import database from '@/model/manager';
 import useStore from '@/store';
 import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
 import { ConnectDeviceInfo } from '@/utils/connectDeviceInfo';
-import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
+import {
+  isEspWifiConnectionInProgress,
+  releaseEspWifiFromSystem,
+} from '@/utils/espWifiSystemPicker';
 import eventBus from '@/utils/eventBus';
 import { delayed, globalGetConnect, sendCmdDispatch } from '@/utils/helper';
 import {
@@ -152,6 +155,13 @@ export const Bootstrap = () => {
   };
 
   const restartConnect = async () => {
+    if (isEspWifiConnectionInProgress()) {
+      console.log('[ROBOT_RECONNECT_SKIPPED]', {
+        reason: 'dedicated ESP WiFi connection is in progress',
+      });
+      return;
+    }
+
     if (!ConnectDeviceInfo.connectStatus || !SocketManage.getInstance().isConnected()) {
       let currentSSID = '';
       try {

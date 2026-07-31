@@ -84,7 +84,7 @@
     "errorInfo9": "MKS电机过负载",
     "errorInfo10": "绑扎抢故障",
     "errorInfo11": "丝盘余量不足",
-    "errorInfo12": "变轨失败",
+    "errorInfo12": "变轨失败"
   },
   "wifi": {
     "reconnect": "重连",
@@ -99,7 +99,23 @@
     "autoConnect": "是否自动连接",
     "savedPassword": "的保存密码",
     "noWifi": "暂无可以连接的WiFi",
-    "connectFailed": "连接失败,请检查密码是否正确或者当前Wi-Fi是否正常",
+    "connectFailed": "ESP WiFi 连接失败",
+    "connectionErrors": {
+      "didNotFindNetwork": "Android 未批准或无法满足本次 ESP WiFi 连接请求，请确认系统连接窗口后重试",
+      "authenticationErrorOccurred": "WiFi 密码错误，请重新输入",
+      "timeoutOccurred": "连接 ESP WiFi 超时，请确认设备已启动并靠近设备后重试",
+      "locationPermissionMissing": "缺少位置或附近 WiFi 权限",
+      "locationServicesOff": "请先打开系统定位服务",
+      "android10ImmediatelyDroppedConnection": "系统在连接后立即断开了 ESP WiFi",
+      "unableToConnect": "系统无法连接到该 ESP WiFi",
+      "unavailable": "未选择匹配的 ESP WiFi，或系统连接请求已超时",
+      "lost": "所选 ESP WiFi 连接已断开",
+      "requestFailed": "Android 无法发起 ESP WiFi 连接请求",
+      "bindFailed": "应用无法绑定到所选 ESP WiFi",
+      "ssidMismatch": "Android 连接到了其他 ESP WiFi，请重新选择",
+      "unsupported": "当前 Android 版本不支持专用 ESP WiFi 连接",
+      "unknown": "发生未知的 WiFi 连接错误"
+    },
     "connectSuccess": "连接成功",
     "useSavedPassword": "是否使用已保存的密码连接",
     "useSaved": "使用已保存",
