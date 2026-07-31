@@ -41,7 +41,6 @@ import { requestEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 
 // Wi-Fi 密码存储键
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
-const WIFI_FORCE_SCAN_COOLDOWN_MS = 30_000;
 
 export const Header = () => {
   const { top } = useSafeAreaInsets();
@@ -66,7 +65,7 @@ export const Header = () => {
   const [currentWifiSSID, setCurrentWifiSSID] = useState<string | null>(null);
   const hasShownRobotWifiPromptRef = useRef(false);
   const wifiRefreshInFlightRef = useRef(false);
-  const lastForcedWifiScanAtRef = useRef(0);
+  const lastSuccessfulWifiListRef = useRef<WifiEntry[]>([]);
 
   const { width } = Dimensions.get('screen');
   // 当前选择的WiFi SSID, 用于连接WiFi中间临时存储
@@ -611,10 +610,35 @@ export const Header = () => {
   const applyRobotWifiList = (entries?: WifiEntry[] | null) => {
     const filteredWifiList = getRobotWifiList(entries);
     if (filteredWifiList.length > 0) {
+      lastSuccessfulWifiListRef.current = filteredWifiList;
       setWifiList(filteredWifiList);
       return true;
     }
     return false;
+  };
+
+  const getFallbackWifiList = () => {
+    const fallbackWifiList = [...lastSuccessfulWifiListRef.current];
+    const knownSSIDs = new Set(fallbackWifiList.map((wifi) => normalizeWifiSSID(wifi.SSID)));
+
+    Object.keys(savedWifiPasswords).forEach((ssid) => {
+      const normalizedSSID = normalizeWifiSSID(ssid);
+      if (!normalizedSSID.startsWith(GlobalConst.wifiName) || knownSSIDs.has(normalizedSSID)) {
+        return;
+      }
+
+      fallbackWifiList.push({
+        SSID: ssid,
+        BSSID: `saved:${normalizedSSID}`,
+        capabilities: '',
+        frequency: 0,
+        level: Number.NaN,
+        timestamp: 0,
+      });
+      knownSSIDs.add(normalizedSSID);
+    });
+
+    return fallbackWifiList;
   };
 
   const handleRefreshWifiList = async (type: 'auto' | 'open' | 'manual' = 'auto') => {
@@ -629,8 +653,6 @@ export const Header = () => {
     }
 
     let loadWifiList: WifiEntry[] = [];
-    let latestSystemWifiList: WifiEntry[] = [];
-
     try {
       if (type === 'auto') {
         // 自动模式：优先使用缓存
@@ -648,7 +670,6 @@ export const Header = () => {
         try {
           const systemWifiList = await WifiManager.loadWifiList();
           if (Array.isArray(systemWifiList) && systemWifiList.length > 0) {
-            latestSystemWifiList = systemWifiList;
             updateWifiCache(systemWifiList, 'system');
             if (applyRobotWifiList(systemWifiList)) {
               console.log('[ROBOT_WIFI_SCAN] displayed system scan results before forced scan');
@@ -658,14 +679,7 @@ export const Header = () => {
           console.warn('[ROBOT_WIFI_SCAN] unable to load system scan results', error);
         }
 
-        const timeSinceLastForcedScan = Date.now() - lastForcedWifiScanAtRef.current;
-        if (timeSinceLastForcedScan < WIFI_FORCE_SCAN_COOLDOWN_MS) {
-          console.log('[ROBOT_WIFI_SCAN] active scan skipped during Android cooldown');
-          return;
-        }
-        lastForcedWifiScanAtRef.current = Date.now();
-
-        // 手动模式：尝试强制扫描，失败则使用最佳缓存
+        // 打开窗口和手动刷新都会尝试强制扫描；系统限流时保留最后成功结果
         try {
           const forcedScanPromise = WifiManager.reScanAndLoadWifiList();
           const forcedScanResult = await Promise.race<WifiEntry[] | null>([
@@ -693,13 +707,11 @@ export const Header = () => {
               '[ROBOT_WIFI_SCAN] forced scan was throttled or returned an invalid result; keeping existing list',
               forcedScanResult
             );
-            const cachedData = getCachedWifiData(true);
-            loadWifiList =
-              latestSystemWifiList.length > 0
-                ? latestSystemWifiList
-                : Array.isArray(cachedData)
-                  ? cachedData
-                  : [];
+            setWifiList((currentWifiList) => {
+              const fallbackWifiList = getFallbackWifiList();
+              return fallbackWifiList.length > 0 ? fallbackWifiList : currentWifiList;
+            });
+            return;
           }
 
           if (loadWifiList && loadWifiList.length > 0) {
@@ -767,6 +779,7 @@ export const Header = () => {
       }
 
       if (filteredWifiList.length > 0) {
+        lastSuccessfulWifiListRef.current = filteredWifiList;
         setWifiList(filteredWifiList);
       } else {
         setWifiList((prevList) => {
@@ -1063,7 +1076,9 @@ export const Header = () => {
                   <View className="flex flex-row items-center justify-center">
                     <Icon source="wifi" size={20} />
                     <Text className="text-md ml-2 text-gray-800">{item.SSID}</Text>
-                    <Text className="ml-2 text-sm text-gray-600">({item.level}dBm)</Text>
+                    {Number.isFinite(item.level) ? (
+                      <Text className="ml-2 text-sm text-gray-600">({item.level}dBm)</Text>
+                    ) : null}
                     {savedWifiPasswords[item.SSID] && (
                       <View style={{ marginLeft: 5 }}>
                         <Icon source="content-save" size={16} color="#4CAF50" />
