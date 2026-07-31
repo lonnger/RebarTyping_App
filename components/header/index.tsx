@@ -22,7 +22,6 @@ import {
   Platform,
 } from 'react-native';
 import {
-  ActivityIndicator,
   Button,
   Dialog,
   Icon,
@@ -54,15 +53,12 @@ import {
 
 // Wi-Fi 密码存储键
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
-const WIFI_BACKGROUND_SCAN_INTERVAL_MS = 35 * 1000;
-const WIFI_FORCED_SCAN_TIMEOUT_MS = 3500;
 
 export const Header = () => {
   const { top } = useSafeAreaInsets();
   const { setRobotStatus, robotStatus } = useStore((state) => state);
   const [wifiChooseListVisible, setWifiChooseListVisible] = useState(false);
   const [wifiList, setWifiList] = useState<WifiEntry[]>([]);
-  const [wifiListLoading, setWifiListLoading] = useState(false);
   const [wifiPassword, setWifiPassword] = useState('');
   const segments = useSegments();
   const isLoginPage = segments.includes('(login)');
@@ -166,7 +162,6 @@ export const Header = () => {
     lastSuccessfulWifiListRef.current = [];
     setWifiCache(null);
     setWifiList([]);
-    setWifiListLoading(false);
   };
 
   const isWifiRadioEnabled = async () => {
@@ -645,13 +640,8 @@ export const Header = () => {
         return;
       }
 
-      setWifiList([]);
-      setWifiListLoading(true);
       setWifiChooseListVisible(true);
-
-      // Wait for the fresh scan before showing networks so stale cache does not
-      // briefly present a powered-off ESP as available.
-      void handleRefreshWifiList('open');
+      await handleRefreshWifiList('auto');
     } catch (error: any) {
       console.error('打开WiFi设置失败:', error?.message || 'Unknown error');
       showNotifier({
@@ -734,21 +724,7 @@ export const Header = () => {
       .slice(0, 5);
   };
 
-  const applyRobotWifiList = (entries?: WifiEntry[] | null) => {
-    const filteredWifiList = getRobotWifiList(entries);
-    if (filteredWifiList.length > 0) {
-      lastSuccessfulWifiListRef.current = filteredWifiList;
-      setWifiList(filteredWifiList);
-      return true;
-    }
-    return false;
-  };
-
-  const getFallbackWifiList = () => {
-    return [...lastSuccessfulWifiListRef.current];
-  };
-
-  const handleRefreshWifiList = async (type: 'auto' | 'open' | 'manual' | 'scheduled' = 'auto') => {
+  const handleRefreshWifiList = async (type: 'auto' | 'manual' = 'auto') => {
     if (wifiRefreshInFlightRef.current) {
       console.log('[ROBOT_WIFI_SCAN] refresh already in progress');
       return;
@@ -756,12 +732,10 @@ export const Header = () => {
     wifiRefreshInFlightRef.current = true;
 
     if (type === 'manual') {
-      setWifiList([]);
-      setWifiListLoading(true);
+      GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 1500);
     }
 
     let loadWifiList: WifiEntry[] = [];
-    let receivedValidForcedScan = false;
     try {
       if (!(await isWifiRadioEnabled())) {
         clearWifiScanResults();
@@ -769,143 +743,58 @@ export const Header = () => {
       }
 
       if (type === 'auto') {
-        // 自动模式：优先使用缓存
         const cachedData = getCachedWifiData();
-        if (cachedData && getRobotWifiList(cachedData).length > 0) {
+        if (cachedData && cachedData.length > 0) {
           loadWifiList = cachedData;
         } else {
-          // 缓存无效，获取系统缓存
-          loadWifiList = await WifiManager.loadWifiList();
-          if (loadWifiList && loadWifiList.length > 0) {
+          const systemWifiList = await WifiManager.loadWifiList();
+          if (Array.isArray(systemWifiList)) {
+            loadWifiList = systemWifiList;
+          }
+          if (loadWifiList.length > 0) {
             updateWifiCache(loadWifiList, 'system');
           }
         }
       } else {
         try {
-          const systemWifiList = await WifiManager.loadWifiList();
-          if (Array.isArray(systemWifiList) && systemWifiList.length > 0) {
-            updateWifiCache(systemWifiList, 'system');
-          }
-        } catch (error) {
-          console.warn('[ROBOT_WIFI_SCAN] unable to load system scan results', error);
-        }
-
-        // 打开窗口和手动刷新都会尝试强制扫描；系统限流时保留最后成功结果
-        try {
-          const forcedScanPromise = WifiManager.reScanAndLoadWifiList();
-          const forcedScanResult = await Promise.race<WifiEntry[] | null>([
-            forcedScanPromise,
-            delayed(WIFI_FORCED_SCAN_TIMEOUT_MS).then(() => null),
-          ]);
-
-          if (forcedScanResult === null) {
-            console.warn('[ROBOT_WIFI_SCAN] forced scan is slow; showing available system results');
-            loadWifiList = await WifiManager.loadWifiList();
-            void forcedScanPromise
-              .then(async (lateWifiList) => {
-                if (!(await isWifiRadioEnabled())) {
-                  clearWifiScanResults();
-                  return;
-                }
-
-                if (Array.isArray(lateWifiList)) {
-                  updateWifiCache(lateWifiList, 'force');
-                  const lateRobotWifiList = getRobotWifiList(lateWifiList);
-                  lastSuccessfulWifiListRef.current = lateRobotWifiList;
-                  setWifiList(lateRobotWifiList);
-                }
-              })
-              .catch((error) => {
-                console.warn('[ROBOT_WIFI_SCAN] late forced scan failed', error);
-              });
-          } else if (Array.isArray(forcedScanResult)) {
+          const forcedScanResult = await WifiManager.reScanAndLoadWifiList();
+          if (Array.isArray(forcedScanResult) && forcedScanResult.length > 0) {
             loadWifiList = forcedScanResult;
-            receivedValidForcedScan = true;
-          } else {
-            if (!(await isWifiRadioEnabled())) {
-              clearWifiScanResults();
-              return;
-            }
-
-            console.warn(
-              '[ROBOT_WIFI_SCAN] forced scan was throttled or returned an invalid result; keeping existing list',
-              forcedScanResult
-            );
-            setWifiList((currentWifiList) => {
-              const fallbackWifiList = getFallbackWifiList();
-              return fallbackWifiList.length > 0 ? fallbackWifiList : currentWifiList;
-            });
-            return;
-          }
-
-          if (receivedValidForcedScan) {
             updateWifiCache(loadWifiList, 'force');
           } else {
-            console.log('强制扫描返回空列表，可能被系统节流，尝试使用缓存数据');
+            console.log('[ROBOT_WIFI_SCAN] forced scan unavailable; using cached results');
             const cachedData = getCachedWifiData(true);
             if (cachedData && cachedData.length > 0) {
               loadWifiList = cachedData;
             } else {
-              loadWifiList = await WifiManager.loadWifiList();
-              if (loadWifiList && loadWifiList.length > 0) {
+              const systemWifiList = await WifiManager.loadWifiList();
+              if (Array.isArray(systemWifiList)) {
+                loadWifiList = systemWifiList;
+              }
+              if (loadWifiList.length > 0) {
                 updateWifiCache(loadWifiList, 'system');
               }
             }
           }
         } catch (error) {
-          console.log('强制扫描失败，使用缓存数据:', error);
-
-          // 强制扫描失败，使用最佳可用缓存
+          console.log('[ROBOT_WIFI_SCAN] forced scan failed; using cached results', error);
           const cachedData = getCachedWifiData(true);
           if (cachedData && cachedData.length > 0) {
             loadWifiList = cachedData;
           } else {
-            // 没有有效缓存，尝试系统缓存
-            loadWifiList = await WifiManager.loadWifiList();
-            if (loadWifiList && loadWifiList.length > 0) {
+            const systemWifiList = await WifiManager.loadWifiList();
+            if (Array.isArray(systemWifiList)) {
+              loadWifiList = systemWifiList;
+            }
+            if (loadWifiList.length > 0) {
               updateWifiCache(loadWifiList, 'system');
             }
           }
         }
       }
 
-      const normalizedWifiList = Array.isArray(loadWifiList) ? loadWifiList : [];
-      if (!Array.isArray(loadWifiList)) {
-        console.warn('WiFi list response is not an array:', loadWifiList);
-      }
-
-      // 处理和过滤WiFi数据
-      const uniqueSSIDs = new Map();
-      normalizedWifiList.forEach((wifi) => {
-        if (
-          wifi.SSID &&
-          wifi.SSID !== '(hidden SSID)' &&
-          normalizeWifiSSID(wifi.SSID).startsWith(GlobalConst.wifiName)
-        ) {
-          const existing = uniqueSSIDs.get(wifi.SSID);
-          if (!existing || wifi.level > existing.level) {
-            uniqueSSIDs.set(wifi.SSID, wifi);
-          }
-        }
-      });
-
-      const filteredWifiList = Array.from(uniqueSSIDs.values())
-        .sort((a, b) => b.level - a.level)
-        .slice(0, 5);
-
-      if (filteredWifiList.length === 0 && type === 'manual') {
-        showNotifier({
-          title: t('wifi.noWifiList'),
-          type: 'error',
-          duration: 3000,
-          onPress: () => { },
-        });
-      }
-
-      if (receivedValidForcedScan) {
-        lastSuccessfulWifiListRef.current = filteredWifiList;
-        setWifiList(filteredWifiList);
-      } else if (filteredWifiList.length > 0) {
+      const filteredWifiList = getRobotWifiList(loadWifiList);
+      if (filteredWifiList.length > 0) {
         lastSuccessfulWifiListRef.current = filteredWifiList;
         setWifiList(filteredWifiList);
       } else {
@@ -916,6 +805,15 @@ export const Header = () => {
           }
           return [];
         });
+
+        if (type === 'manual') {
+          showNotifier({
+            title: t('wifi.noWifiList'),
+            type: 'error',
+            duration: 3000,
+            onPress: () => { },
+          });
+        }
       }
     } catch (error) {
       console.error(t('wifi.wifiGetFailed'), error);
@@ -937,21 +835,8 @@ export const Header = () => {
       }
     } finally {
       wifiRefreshInFlightRef.current = false;
-      setWifiListLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!wifiChooseListVisible || Platform.OS !== 'android') {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      void handleRefreshWifiList('scheduled');
-    }, WIFI_BACKGROUND_SCAN_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [wifiChooseListVisible]);
 
   // 强制暂停
   const handleForcePause = () => {
@@ -1239,34 +1124,17 @@ export const Header = () => {
               )}
               ListEmptyComponent={() => (
                 <View className="mb-5 flex flex-col items-center justify-center gap-2 p-4">
-                  {wifiListLoading ? (
-                    <>
-                      <ActivityIndicator size="small" />
-                      <Text className="text-lg font-bold text-gray-800">
-                        {t('wifi.refreshingWifiList')}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Icon source="wifi-off" size={24} />
-                      <Text className="text-lg font-bold text-gray-800">
-                        {t('wifi.noWifiList')}
-                      </Text>
-                    </>
-                  )}
+                  <Icon source="wifi-off" size={24} />
+                  <Text className="text-lg font-bold text-gray-800">{t('wifi.noWifiList')}</Text>
                 </View>
               )}
-              ListFooterComponent={
-                wifiListLoading
-                  ? null
-                  : () => (
-                      <View className="mt-3 flex flex-row justify-center p-1">
-                        <Text className="text-center text-sm font-bold text-gray-500">
-                          {t('wifi.noWifiListTips')}
-                        </Text>
-                      </View>
-                    )
-              }
+              ListFooterComponent={() => (
+                <View className="mt-3 flex flex-row justify-center p-1">
+                  <Text className="text-center text-sm font-bold text-gray-500">
+                    {t('wifi.noWifiListTips')}
+                  </Text>
+                </View>
+              )}
             />
           </View>
         </Modal>
