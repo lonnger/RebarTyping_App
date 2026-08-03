@@ -64,6 +64,7 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
+        "ACCESS_NETWORK_STATE",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "NEARBY_WIFI_DEVICES"

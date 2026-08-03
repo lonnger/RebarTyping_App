@@ -44,6 +44,26 @@ class EspWifiPickerModule(
     requestEspWifiNetwork(ssid, password, usePrefix = false, promise = promise)
   }
 
+  @ReactMethod
+  fun isVpnActive(promise: Promise) {
+    try {
+      val activeCapabilities =
+        connectivityManager.activeNetwork?.let(connectivityManager::getNetworkCapabilities)
+      val activeNetworkIsVpn =
+        activeCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true ||
+          (activeCapabilities != null &&
+            !activeCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN))
+      val hasVpnTransport = connectivityManager.allNetworks.any { network ->
+        connectivityManager.getNetworkCapabilities(network)
+          ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+      }
+
+      promise.resolve(activeNetworkIsVpn || hasVpnTransport)
+    } catch (error: Exception) {
+      promise.reject("VPN_CHECK_FAILED", error.message, error)
+    }
+  }
+
   private fun requestEspWifiNetwork(
     ssidOrPrefix: String,
     password: String,

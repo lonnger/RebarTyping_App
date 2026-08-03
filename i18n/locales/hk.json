@@ -156,6 +156,8 @@
   "errors": {
     "emptyCredentials": "用戶名和密碼不能為空",
     "networkLoginRequired": "登錄失敗，請聯網登錄",
+    "vpnDetected": "檢測到VPN連接，請關閉VPN後再登錄",
+    "vpnCheckFailed": "無法驗證網絡安全狀態，請檢查網絡後重試",
     "sessionExpired": "登錄已超過{{minutes}}分鐘，請聯網重新登錄",
     "sessionExpiringSoon": "賬戶使用時限還剩{{minutes}}分鐘，請重新登錄",
     "invalidCredentials": "用戶名或密碼錯誤",

@@ -157,6 +157,8 @@
     "errors": {
       "emptyCredentials": "Username and password cannot be empty",
       "networkLoginRequired": "Login failed. Please connect to the internet and try again.",
+      "vpnDetected": "A VPN connection was detected. Turn off the VPN before logging in.",
+      "vpnCheckFailed": "Unable to verify network security. Check the network and try again.",
       "sessionExpired": "Your {{minutes}}-minute login session has expired. Please connect to the internet and log in again.",
       "sessionExpiringSoon": "Your account session expires in {{minutes}} minutes. Please log in again.",
       "invalidCredentials": "Incorrect username or password",

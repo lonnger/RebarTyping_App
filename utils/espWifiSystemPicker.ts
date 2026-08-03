@@ -13,6 +13,7 @@ export type ConnectedEspWifiInfo = {
 type EspWifiPickerNativeModule = {
   requestEspWifi(prefix: string, password: string): Promise<EspWifiPickerResult>;
   connectToEspWifi(ssid: string, password: string): Promise<EspWifiPickerResult>;
+  isVpnActive(): Promise<boolean>;
   getConnectedEspWifiInfo(): Promise<ConnectedEspWifiInfo | null>;
   releaseEspWifi(): Promise<void>;
 };
@@ -54,6 +55,18 @@ export const connectToEspWifiFromSystem = async (
   }
 
   return nativePicker.connectToEspWifi(ssid, password);
+};
+
+export const isVpnActive = async (): Promise<boolean> => {
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+
+  if (!nativePicker) {
+    throw new Error('VPN detection native module is unavailable. Rebuild the Android app.');
+  }
+
+  return nativePicker.isVpnActive();
 };
 
 export const getConnectedEspWifiInfo = async (): Promise<ConnectedEspWifiInfo | null> => {

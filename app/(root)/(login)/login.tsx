@@ -23,7 +23,7 @@ import WifiManager, { WifiEntry } from 'react-native-wifi-reborn';
 import { Header } from '@/components/header';
 import { GlobalConst, storage_config } from '@/constants';
 import useStore from '@/store';
-import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
+import { isVpnActive, releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 import {
   getCountryPayloadFromIpInfo,
   getSavedIpCountryPayload,
@@ -161,6 +161,27 @@ export default function Login() {
         title: t('errors.readManual'),
         type: 'error',
         duration: 3000,
+        onPress: () => {},
+      });
+      return;
+    }
+
+    try {
+      if (await isVpnActive()) {
+        showNotifier({
+          title: t('errors.vpnDetected'),
+          type: 'error',
+          duration: 6000,
+          onPress: () => {},
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('VPN detection failed', error);
+      showNotifier({
+        title: t('errors.vpnCheckFailed'),
+        type: 'error',
+        duration: 5000,
         onPress: () => {},
       });
       return;
