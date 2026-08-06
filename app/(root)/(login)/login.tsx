@@ -34,7 +34,7 @@ import { saveOnlineLoginAt } from '@/utils/loginSession';
 import { showNotifier } from '@/utils/notifier';
 
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
-const IP_LOCATION_REQUEST_TIMEOUT_MS = 10_000;
+const IP_LOCATION_REQUEST_TIMEOUT_MS = 7_000;
 const IP_LOCATION_ENDPOINTS = [
   {
     name: 'ipwho.is',
@@ -58,6 +58,19 @@ const IP_LOCATION_ENDPOINTS = [
       ip: data.ip,
       country: data.country,
       countryCode: data.country_code,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    }),
+  },
+  {
+    name: 'GeoJS',
+    url: 'https://get.geojs.io/v1/ip/geo.json',
+    normalize: (data: Record<string, any>) => ({
+      success: !data.error,
+      message: data.reason,
+      ip: data.ip,
+      country: data.country_name,
+      countryCode: data.country_code || data.country,
       latitude: data.latitude,
       longitude: data.longitude,
     }),

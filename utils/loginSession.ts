@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const ONLINE_LOGIN_VALIDITY_MS = 5 * 60 * 1000;
-export const ONLINE_LOGIN_WARNING_MS = 4 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export const ONLINE_LOGIN_VALIDITY_DAYS = 30;
+export const ONLINE_LOGIN_WARNING_DAYS = 3;
+export const ONLINE_LOGIN_VALIDITY_MS = ONLINE_LOGIN_VALIDITY_DAYS * DAY_MS;
+export const ONLINE_LOGIN_WARNING_MS = ONLINE_LOGIN_WARNING_DAYS * DAY_MS;
 
 const LAST_ONLINE_LOGIN_AT_STORAGE_KEY = 'last_online_login_at';
 

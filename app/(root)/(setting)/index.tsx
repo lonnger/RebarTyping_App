@@ -206,10 +206,12 @@ export default function () {
             <Dialog
               visible={isVersionDialogVisible}
               onDismiss={() => setIsVersionDialogVisible(false)}>
-              <Dialog.Title>版本更新</Dialog.Title>
+              <Dialog.Title>{t('setting.versionUpdate')}</Dialog.Title>
               <Dialog.Content>
-                <Text className="mb-3 text-base font-medium">当前版本：{appVersion}</Text>
-                {releaseNotes.notes.map((note, idx) => (
+                <Text className="mb-3 text-base font-medium">
+                  {t('setting.currentVersion', { version: appVersion })}
+                </Text>
+                {releaseNotes.notes[language].map((note, idx) => (
                   <Text key={idx} className="text-sm leading-6 text-gray-700">
                     {`${idx + 1}. ${note}`}
                   </Text>
@@ -217,7 +219,7 @@ export default function () {
               </Dialog.Content>
               <Dialog.Actions>
                 <Button onPress={() => setIsVersionDialogVisible(false)}>
-                  <Text>关闭</Text>
+                  <Text>{t('setting.close')}</Text>
                 </Button>
               </Dialog.Actions>
             </Dialog>

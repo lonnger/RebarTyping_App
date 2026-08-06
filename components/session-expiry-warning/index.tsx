@@ -16,7 +16,7 @@ type SessionExpiryWarningProps = {
 export const SessionExpiryWarning = ({ isLoginPage }: SessionExpiryWarningProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [remainingMinutes, setRemainingMinutes] = useState(0);
+  const [remainingDays, setRemainingDays] = useState(0);
   const lastLoggedStateRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -36,19 +36,19 @@ export const SessionExpiryWarning = ({ isLoginPage }: SessionExpiryWarningProps)
           sessionStatus.elapsedMs === null
             ? 0
             : Math.max(0, ONLINE_LOGIN_VALIDITY_MS - sessionStatus.elapsedMs);
-        const nextRemainingMinutes = Math.ceil(remainingMs / 60_000);
+        const nextRemainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
         const shouldShow =
           !sessionStatus.expired &&
           sessionStatus.lastOnlineLoginAt !== null &&
           sessionStatus.elapsedMs !== null &&
           sessionStatus.elapsedMs >= ONLINE_LOGIN_VALIDITY_MS - ONLINE_LOGIN_WARNING_MS;
 
-        const warningStateKey = `${sessionStatus.reason}:${shouldShow}:${nextRemainingMinutes}`;
+        const warningStateKey = `${sessionStatus.reason}:${shouldShow}:${nextRemainingDays}`;
         if (__DEV__ && lastLoggedStateRef.current !== warningStateKey) {
           lastLoggedStateRef.current = warningStateKey;
           console.log('[ONLINE_LOGIN_WARNING_STATUS]', {
             elapsedMs: sessionStatus.elapsedMs,
-            remainingMinutes: nextRemainingMinutes,
+            remainingDays: nextRemainingDays,
             warningStartsAtMs: ONLINE_LOGIN_VALIDITY_MS - ONLINE_LOGIN_WARNING_MS,
             visible: shouldShow,
             reason: sessionStatus.reason,
@@ -57,18 +57,19 @@ export const SessionExpiryWarning = ({ isLoginPage }: SessionExpiryWarningProps)
 
         if (mounted) {
           setVisible(shouldShow);
-          setRemainingMinutes(nextRemainingMinutes);
+          setRemainingDays(nextRemainingDays);
         }
       } catch (error) {
         console.warn('Unable to check login expiry warning', error);
         if (mounted) {
           setVisible(false);
-          setRemainingMinutes(0);
+          setRemainingDays(0);
         }
       }
     };
 
     refreshVisibility();
+    const refreshInterval = setInterval(refreshVisibility, 60_000);
     const appStateListener = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active' || nextAppState === 'background') {
         refreshVisibility();
@@ -77,6 +78,7 @@ export const SessionExpiryWarning = ({ isLoginPage }: SessionExpiryWarningProps)
 
     return () => {
       mounted = false;
+      clearInterval(refreshInterval);
       appStateListener.remove();
     };
   }, [isLoginPage]);
@@ -113,7 +115,7 @@ export const SessionExpiryWarning = ({ isLoginPage }: SessionExpiryWarningProps)
           flexShrink: 1,
         }}>
         {t('errors.sessionExpiringSoon', {
-          minutes: remainingMinutes,
+          days: remainingDays,
         })}
       </Text>
     </View>

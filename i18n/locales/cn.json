@@ -157,8 +157,8 @@
     "networkLoginRequired": "登录失败，请联网登录",
     "vpnDetected": "检测到VPN连接，请关闭VPN后再登录",
     "vpnCheckFailed": "无法验证网络安全状态，请检查网络后重试",
-    "sessionExpired": "登录已超过{{minutes}}分钟，请联网重新登录",
-    "sessionExpiringSoon": "账户使用时限还剩{{minutes}}分钟，请重新登录",
+    "sessionExpired": "登录已超过{{days}}天，请联网重新登录",
+    "sessionExpiringSoon": "账户使用时限还剩{{days}}天，请重新登录",
     "invalidCredentials": "用户名或密码错误",
     "readManual": "请先阅读用户手册并知悉该手册",
     "wifiPermission": "位置权限是连接WiFi的必要条件",
@@ -208,7 +208,10 @@
     "username": "用户名",
     "companyAddress": "公司地址",
     "companyName": "公司名称",
-    "phoneNumber": "联系电话"
+    "phoneNumber": "联系电话",
+    "versionUpdate": "版本更新",
+    "currentVersion": "当前版本：{{version}}",
+    "close": "关闭"
   },
   "malfunction": {
     "title": "故障监控",

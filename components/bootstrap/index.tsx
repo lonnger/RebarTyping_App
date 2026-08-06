@@ -25,7 +25,7 @@ import { delayed, globalGetConnect, sendCmdDispatch } from '@/utils/helper';
 import {
   clearOnlineLoginAt,
   getOnlineLoginSessionStatus,
-  ONLINE_LOGIN_VALIDITY_MS,
+  ONLINE_LOGIN_VALIDITY_DAYS,
 } from '@/utils/loginSession';
 import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
@@ -94,6 +94,17 @@ export const Bootstrap = () => {
     const screenListener = AppState.addEventListener('change', handleAppStateChange);
 
     return () => screenListener.remove();
+  }, []);
+
+  // Keep enforcing expiry even when the app remains active for several days.
+  useEffect(() => {
+    const sessionCheckInterval = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        checkOnlineLoginValidity();
+      }
+    }, 60_000);
+
+    return () => clearInterval(sessionCheckInterval);
   }, []);
 
   //专门监听 GunErrorEvent（枪口异常）。一旦触发，会立即发送 lockUp（锁定）命令并弹出红色报错
@@ -308,7 +319,7 @@ export const Bootstrap = () => {
       router.replace('/(root)/(login)');
       showNotifier({
         title: t('errors.sessionExpired', {
-          minutes: ONLINE_LOGIN_VALIDITY_MS / 60_000,
+          days: ONLINE_LOGIN_VALIDITY_DAYS,
         }),
         type: 'info',
         duration: 5000,

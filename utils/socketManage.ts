@@ -462,7 +462,7 @@ export class SocketManage {
   }
 
   private async handleCountryResponse(eventData: string) {
-    const match = /^up:country[:=](china|global|board)$/i.exec(eventData.trim());
+    const match = /^up:country[:=](china|global)$/i.exec(eventData.trim());
     if (!match || this.countryVerificationHandled || this.countryResponseHandling) {
       return;
     }
@@ -471,8 +471,7 @@ export class SocketManage {
     this.stopCountryQuery();
     const verificationGeneration = this.countryVerificationGeneration;
 
-    // Older controllers return Board; it has the same meaning as Global.
-    const boardCountry = match[1].toLowerCase() === 'board' ? 'global' : match[1].toLowerCase();
+    const boardCountry = match[1].toLowerCase();
     let savedCountry: string | null = null;
 
     try {
@@ -498,7 +497,9 @@ export class SocketManage {
       return;
     }
 
-    const matched = normalizedSavedCountry === boardCountry;
+    // Global controllers are valid in every region. A mismatch only occurs when
+    // a China controller is used while the tablet's IP location is Global.
+    const matched = boardCountry === 'global' || normalizedSavedCountry === 'china';
     const resultCommand = matched ? Command.countryMatched : Command.countryMismatch;
 
     this.countryVerificationHandled = true;
