@@ -27,11 +27,13 @@ import {
   parserMksData,
 } from './helper';
 import { getSavedIpCountryPayload } from './ipCountry';
+import { saveOnlineLoginAt } from './loginSession';
 import { showNotifier } from './notifier';
 
 import { GlobalActivityIndicatorManager } from '@/components/activity-indicator-global';
 import { GlobalConst, TyingState } from '@/constants';
 import { Command } from '@/constants/command';
+import { eventBusKey } from '@/constants/event';
 import i18n from '@/i18n/i18n';
 import useStore from '@/store';
 
@@ -456,7 +458,9 @@ export class SocketManage {
 
     sendResult();
     [1, 2].forEach((repeatIndex) => {
-      const timeout = setTimeout(sendResult, repeatIndex * this.countryResultIntervalMs);
+      const timeout = setTimeout(() => {
+        sendResult();
+      }, repeatIndex * this.countryResultIntervalMs);
       this.countryResultTimeouts.push(timeout);
     });
   }
@@ -472,6 +476,33 @@ export class SocketManage {
     const verificationGeneration = this.countryVerificationGeneration;
 
     const boardCountry = match[1].toLowerCase();
+
+    if (boardCountry === 'global') {
+      try {
+        await saveOnlineLoginAt();
+      } catch (error) {
+        console.error('[COUNTRY_VERIFY] unable to reset login expiry', error);
+      }
+
+      if (
+        verificationGeneration !== this.countryVerificationGeneration ||
+        !this.isConnected()
+      ) {
+        return;
+      }
+
+      this.countryVerificationHandled = true;
+      this.countryResponseHandling = false;
+      console.log('[COUNTRY_VERIFY]', {
+        boardCountry,
+        matched: true,
+        loginExpiryReset: true,
+        resultCommand: Command.countryMatched,
+      });
+      this.sendCountryResult(Command.countryMatched);
+      return;
+    }
+
     let savedCountry: string | null = null;
 
     try {
@@ -497,9 +528,7 @@ export class SocketManage {
       return;
     }
 
-    // Global controllers are valid in every region. A mismatch only occurs when
-    // a China controller is used while the tablet's IP location is Global.
-    const matched = boardCountry === 'global' || normalizedSavedCountry === 'china';
+    const matched = normalizedSavedCountry === 'china';
     const resultCommand = matched ? Command.countryMatched : Command.countryMismatch;
 
     this.countryVerificationHandled = true;
@@ -511,6 +540,13 @@ export class SocketManage {
       resultCommand,
     });
     this.sendCountryResult(resultCommand);
+    if (!matched) {
+      // This timer is intentionally independent of the socket cleanup timers:
+      // once a mismatch is confirmed, logout must still happen if WiFi drops.
+      setTimeout(() => {
+        eventBus.publish(eventBusKey.CountryMismatchLogoutEvent);
+      }, 2 * this.countryResultIntervalMs);
+    }
   }
 
   //检查当前是否连接

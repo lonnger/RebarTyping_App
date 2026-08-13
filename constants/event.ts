@@ -19,4 +19,5 @@ export enum eventBusKey {
   MksEvent = 'MksEvent',
   BackBoardEvent = 'BackBoardEvent',
   FrontBoardEvent = 'FrontBoardEvent',
+  CountryMismatchLogoutEvent = 'CountryMismatchLogoutEvent',
 }

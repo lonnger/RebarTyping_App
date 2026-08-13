@@ -107,6 +107,12 @@ export const Bootstrap = () => {
     return () => clearInterval(sessionCheckInterval);
   }, []);
 
+  useEffect(() => {
+    return eventBus.subscribe(eventBusKey.CountryMismatchLogoutEvent, () => {
+      void redirectToLoginAfterCountryMismatch();
+    });
+  }, []);
+
   //专门监听 GunErrorEvent（枪口异常）。一旦触发，会立即发送 lockUp（锁定）命令并弹出红色报错
   // 方案：使用依赖数组确保拿到最新的 rebootState
   useEffect(() => {
@@ -322,6 +328,35 @@ export const Bootstrap = () => {
           days: ONLINE_LOGIN_VALIDITY_DAYS,
         }),
         type: 'info',
+        duration: 5000,
+        onPress: () => {},
+      });
+    } finally {
+      sessionRedirectingRef.current = false;
+    }
+  };
+
+  const redirectToLoginAfterCountryMismatch = async () => {
+    if (sessionRedirectingRef.current) {
+      return;
+    }
+
+    sessionRedirectingRef.current = true;
+    try {
+      SocketManage.getInstance().disconnectSocket();
+
+      try {
+        await releaseEspWifiFromSystem();
+      } catch (error) {
+        console.warn('releaseEspWifiFromSystem error', error);
+      }
+
+      await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
+      router.dismissAll();
+      router.replace('/(root)/(login)');
+      showNotifier({
+        title: t('errors.countryMismatchLogout'),
+        type: 'error',
         duration: 5000,
         onPress: () => {},
       });

@@ -161,6 +161,7 @@
       "vpnCheckFailed": "Unable to verify network security. Check the network and try again.",
       "sessionExpired": "Your {{days}}-day login session has expired. Please connect to the internet and log in again.",
       "sessionExpiringSoon": "Your account session expires in {{days}} days. Please log in again.",
+      "countryMismatchLogout": "The device region does not match the current usage region. You have been logged out.",
       "invalidCredentials": "Incorrect username or password",
       "readManual": "Please read the user manual and acknowledge its contents",
       "wifiPermission": "Location permission is required to connect to WiFi",

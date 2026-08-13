@@ -160,6 +160,7 @@
     "vpnCheckFailed": "無法驗證網絡安全狀態，請檢查網絡後重試",
     "sessionExpired": "登錄已超過{{days}}天，請聯網重新登錄",
     "sessionExpiringSoon": "賬戶使用時限還剩{{days}}天，請重新登錄",
+    "countryMismatchLogout": "裝置區域與目前使用地區不相符，已退出登錄",
     "invalidCredentials": "用戶名或密碼錯誤",
     "readManual": "請先閱讀用戶手冊並知悉該手冊",
     "wifiPermission": "位置權限是連接WiFi的必要條件",
