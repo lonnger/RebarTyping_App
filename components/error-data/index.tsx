@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 import { Button, Card, DataTable, Icon } from 'react-native-paper';
 
+import { HOME_LAYOUT } from '@/constants/home-layout';
 import { useStore } from '@/store';
 import { ConnectDeviceInfo } from '@/utils/connectDeviceInfo';
 
@@ -32,7 +33,9 @@ export const ErrorData = () => {
   };
 
   return (
-    <Card className="w-11/12 mr-auto min-h-[30%]" style={{ marginTop: -15 }}>
+    <Card
+      className="mr-auto"
+      style={{ width: HOME_LAYOUT.left.cardWidth, flex: HOME_LAYOUT.left.errorCardFlex }}>
       <View className="w-full px-5">
         <View className="mb-1 mt-0 flex flex-row items-center justify-center">
           <Icon source="alert-circle-outline" size={22} />

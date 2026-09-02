@@ -8,10 +8,15 @@ import { TouchableOpacity, View } from 'react-native';
 import { TouchableRipple } from 'react-native-paper';
 
 import { Command } from '@/constants/command';
+import { HOME_LAYOUT } from '@/constants/home-layout';
+import { scaleHomeValue, useHomeLayoutScale } from '@/hooks/useHomeLayoutScale';
 import { DIRECTION } from '@/types';
 import { debounce, sendCmdDispatch, sendCmdWithRepeat } from '@/utils/helper';
 //定义手动模式遥感组件
 export const ControlManualControl = () => {
+  const { manualDirection } = HOME_LAYOUT.right;
+  const { scale } = useHomeLayoutScale();
+  const scaled = (value: number) => scaleHomeValue(value, scale);
   const switchLeftOrRight = debounce((direction: DIRECTION) => {
     if (direction === DIRECTION.LEFT) {
       sendCmdDispatch(Command.goLeft);
@@ -39,64 +44,101 @@ export const ControlManualControl = () => {
   };
 
   return (
-    <View className="relative mt-1.5 flex h-[180px] w-[150px] flex-row items-center justify-center gap-x-5">
-      <View className="absolute left-0 top-0 h-full w-full flex-col items-center justify-center gap-y-10">
+    <View
+      className="relative flex flex-row items-center justify-center"
+      style={{
+        width: scaled(manualDirection.containerWidth),
+        height: scaled(manualDirection.containerHeight),
+        marginTop: scaled(manualDirection.containerMarginTop),
+      }}>
+      <View
+        className="absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
+        style={{ gap: scaled(manualDirection.verticalGap) }}>
         <TouchableRipple
           onPressIn={() => switchTop(true)}
           onPressOut={() => switchTop(false)}
           centered
-          style={{ top: -32 }}              
-          className="rounded-full px-2 py-2"
+          style={{
+            top: -scaled(manualDirection.verticalArrowOffset),
+            padding: scaled(manualDirection.arrowTouchPadding),
+          }}
+          className="rounded-full"
           borderless
           rippleColor="rgba(0, 0, 0, .32)">
           <Image
             source={require('@/assets/icon/top-arrow.png')}
-            style={{ width: 50, height: 50 }}
+            style={{
+              width: scaled(manualDirection.arrowSize),
+              height: scaled(manualDirection.arrowSize),
+            }}
           />
         </TouchableRipple>
         <TouchableRipple
           onPressIn={() => switchDown(true)} //
-          onPressOut={() => switchDown(false)}//
+          onPressOut={() => switchDown(false)} //
           centered
-          style={{ top: 32 }}
-          className="rounded-full px-2 py-2"
+          style={{
+            top: scaled(manualDirection.verticalArrowOffset),
+            padding: scaled(manualDirection.arrowTouchPadding),
+          }}
+          className="rounded-full"
           borderless
           rippleColor="rgba(0, 0, 0, .32)">
           <Image
             source={require('@/assets/icon/down-arrow.png')}
-            style={{ width: 50, height: 50 }}
+            style={{
+              width: scaled(manualDirection.arrowSize),
+              height: scaled(manualDirection.arrowSize),
+            }}
           />
         </TouchableRipple>
       </View>
       <TouchableOpacity className="flex rounded-full">
         <Image
           source={require('@/assets/direction_tags.png')}
-          style={{ width: 100, height: 100 }}
+          style={{
+            width: scaled(manualDirection.centerImageSize),
+            height: scaled(manualDirection.centerImageSize),
+          }}
         />
       </TouchableOpacity>
-      <View className="absolute left-0 top-0 h-full w-full flex-row items-center justify-center gap-x-10">
+      <View
+        className="absolute left-0 top-0 h-full w-full flex-row items-center justify-center"
+        style={{ gap: scaled(manualDirection.horizontalGap) }}>
         <TouchableRipple
           onPress={() => switchLeftOrRight(DIRECTION.LEFT)}
           centered
-          style={{ left: -40 }}
-          className="rounded-full px-2 py-2"
+          style={{
+            left: -scaled(manualDirection.horizontalArrowOffset),
+            padding: scaled(manualDirection.arrowTouchPadding),
+          }}
+          className="rounded-full"
           borderless
           rippleColor="rgba(0, 0, 0, .32)">
           <Image
             source={require('@/assets/icon/left-arrow.png')}
-            style={{ width: 50, height: 50 }}
+            style={{
+              width: scaled(manualDirection.arrowSize),
+              height: scaled(manualDirection.arrowSize),
+            }}
           />
         </TouchableRipple>
         <TouchableRipple
           onPress={() => switchLeftOrRight(DIRECTION.RIGHT)}
           centered
           borderless
-          style={{ left: 40 }}
-          className="rounded-full px-2 py-2"
+          style={{
+            left: scaled(manualDirection.horizontalArrowOffset),
+            padding: scaled(manualDirection.arrowTouchPadding),
+          }}
+          className="rounded-full"
           rippleColor="rgba(0, 0, 0, .32)">
           <Image
             source={require('@/assets/icon/right-arrow.png')}
-            style={{ width: 50, height: 50 }}
+            style={{
+              width: scaled(manualDirection.arrowSize),
+              height: scaled(manualDirection.arrowSize),
+            }}
           />
         </TouchableRipple>
       </View>

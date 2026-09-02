@@ -21,14 +21,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import {
-  Button,
-  Dialog,
-  Icon,
-  Modal,
-  Portal,
-  TextInput,
-} from 'react-native-paper';
+import { Button, Dialog, Icon, Modal, Portal, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WifiManager, { WifiEntry } from 'react-native-wifi-reborn';
 
@@ -39,6 +32,8 @@ import { GlobalSnackbarManager } from '../snackbar-global';
 import { GlobalConst } from '@/constants';
 import { Command } from '@/constants/command';
 import { eventBusKey } from '@/constants/event';
+import { HOME_LAYOUT } from '@/constants/home-layout';
+import { scaleHomeValue, useHomeLayoutScale } from '@/hooks/useHomeLayoutScale';
 import useStore from '@/store';
 import { ROBOT_CURRENT_MODE } from '@/types';
 import eventBus from '@/utils/eventBus';
@@ -56,6 +51,8 @@ const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
 
 export const Header = () => {
   const { top } = useSafeAreaInsets();
+  const { scale } = useHomeLayoutScale();
+  const scaled = (value: number) => scaleHomeValue(value, scale);
   const { setRobotStatus, robotStatus } = useStore((state) => state);
   const [wifiChooseListVisible, setWifiChooseListVisible] = useState(false);
   const [wifiList, setWifiList] = useState<WifiEntry[]>([]);
@@ -215,10 +212,7 @@ export const Header = () => {
         setWifiList((currentWifiList) => {
           let updated = false;
           const nextWifiList = currentWifiList.map((wifi) => {
-            if (
-              normalizeWifiSSID(wifi.SSID) !== normalizedSSID ||
-              wifi.level === wifiInfo.rssi
-            ) {
+            if (normalizeWifiSSID(wifi.SSID) !== normalizedSSID || wifi.level === wifiInfo.rssi) {
               return wifi;
             }
 
@@ -329,7 +323,7 @@ export const Header = () => {
       message: t('wifi.connectRobotWifiReminderMessage'),
       type: 'info',
       duration: 5000,
-      onPress: () => { },
+      onPress: () => {},
     });
   };
 
@@ -368,7 +362,7 @@ export const Header = () => {
               message: t('wifi.notRobotWifi'),
               type: 'info',
               duration: 3000,
-              onPress: () => { },
+              onPress: () => {},
             });
           }
         }
@@ -377,8 +371,7 @@ export const Header = () => {
           setRobotStatus({
             currentConnectWifiSSID: currentSSID,
           });
-        }
-        else if (!previousSSID && !currentIsRobotWifi) {
+        } else if (!previousSSID && !currentIsRobotWifi) {
           showRobotWifiPrompt();
         }
       } catch (error) {
@@ -454,7 +447,6 @@ export const Header = () => {
 
       await delayed(200);
       const robotConnected = await handleConnectToSocketAgain();
-
     } catch (error) {
       console.error('autoReconnectWifi error', error);
       GlobalActivityIndicatorManager.current?.hide();
@@ -462,7 +454,7 @@ export const Header = () => {
         title: `${t('wifi.autoReconnect')} ${ssid} ${t('common.failed')}`,
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
     }
   };
@@ -575,7 +567,7 @@ export const Header = () => {
         message: robotConnected ? '' : `${selectedSSID} / TCP 8080`,
         type: robotConnected ? 'success' : 'error',
         duration: robotConnected ? 3000 : 5000,
-        onPress: () => { },
+        onPress: () => {},
       });
 
       return robotConnected;
@@ -591,7 +583,7 @@ export const Header = () => {
         message: getWifiConnectionErrorMessage(error),
         type: 'error',
         duration: 5000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return false;
     } finally {
@@ -606,7 +598,7 @@ export const Header = () => {
         title: t('wifi.passwordEmptyOrWifiNotSelected'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return;
     }
@@ -629,7 +621,7 @@ export const Header = () => {
           title: t('wifi.needWifiPermission'),
           type: 'error',
           duration: 3000,
-          onPress: () => { },
+          onPress: () => {},
         });
         return;
       }
@@ -648,7 +640,7 @@ export const Header = () => {
         title: t('wifi.openWifiSettingFailed'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
     }
   };
@@ -811,7 +803,7 @@ export const Header = () => {
             title: t('wifi.noWifiList'),
             type: 'error',
             duration: 3000,
-            onPress: () => { },
+            onPress: () => {},
           });
         }
       }
@@ -830,7 +822,7 @@ export const Header = () => {
           title: t('wifi.wifiGetFailed'),
           type: 'error',
           duration: 3000,
-          onPress: () => { },
+          onPress: () => {},
         });
       }
     } finally {
@@ -879,7 +871,7 @@ export const Header = () => {
         title: t('wifi.passwordEmptyOrWifiNotSelected'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return;
     }
@@ -898,7 +890,7 @@ export const Header = () => {
         title: 'WiFi 已连接，但密码保存失败',
         type: 'warning',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
     }
 
@@ -916,8 +908,7 @@ export const Header = () => {
   // 连接到WiFi的核心逻辑
   const connectToWifi = async (password: string) => {
     const selectedSSID = currentSelectedWifi.current;
-    const usesDedicatedEspConnection =
-      Platform.OS === 'android' && Number(Platform.Version) >= 29;
+    const usesDedicatedEspConnection = Platform.OS === 'android' && Number(Platform.Version) >= 29;
 
     try {
       if (wifiConnecting) {
@@ -985,7 +976,7 @@ export const Header = () => {
         message: robotConnected ? '' : `${selectedSSID} / TCP 8080`,
         type: robotConnected ? 'success' : 'error',
         duration: robotConnected ? 3000 : 5000,
-        onPress: () => { },
+        onPress: () => {},
       });
 
       return robotConnected;
@@ -998,7 +989,7 @@ export const Header = () => {
         message: getWifiConnectionErrorMessage(error),
         type: 'error',
         duration: 5000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return false;
     } finally {
@@ -1010,27 +1001,50 @@ export const Header = () => {
   };
 
   const robotWifiButtonLabel =
-    currentWifiSSID && isRobotWifiSSID(currentWifiSSID)
-      ? currentWifiSSID
-      : t('common.wifi');
+    currentWifiSSID && isRobotWifiSSID(currentWifiSSID) ? currentWifiSSID : t('common.wifi');
+  const { header } = HOME_LAYOUT;
 
   return (
-  <View 
-  className="flex w-full flex-col px-6" 
-  style={{ paddingTop: top + 20 }}>
-        <View className="flex w-full flex-row items-start justify-between">
-        <View className="flex flex-col items-start gap-0">
+    <View
+      className="flex w-full flex-col"
+      style={{
+        paddingTop: top + scaled(header.safeAreaExtraTop),
+        paddingHorizontal: scaled(header.horizontalPadding),
+        transform: [{ translateX: scaled(header.offsetX) }, { translateY: scaled(header.offsetY) }],
+      }}>
+      <View className="flex w-full flex-row items-start justify-between">
+        <View
+          className="flex flex-col items-start gap-0"
+          style={{
+            transform: [
+              { translateX: scaled(header.logo.offsetX) },
+              { translateY: scaled(header.logo.offsetY) },
+            ],
+          }}>
           <Image
             source={require('@/assets/hkcrc.png')}
-            style={{ width: 358, height: 44 }}
+            style={{ width: scaled(header.logo.width), height: scaled(header.logo.height) }}
             contentFit="contain"
             transition={1000}
           />
-        <SessionExpiryWarning isLoginPage={isLoginPage} />
+          <SessionExpiryWarning isLoginPage={isLoginPage} />
         </View>
 
-        <View className="flex flex-row items-center gap-2">
-          <View className="flex flex-row items-center gap-2 pt-1">
+        <View
+          className="flex flex-row items-center"
+          style={{
+            gap: scaled(header.controls.gap),
+            transform: [
+              { translateX: scaled(header.controls.offsetX) },
+              { translateY: scaled(header.controls.offsetY) },
+            ],
+          }}>
+          <View
+            className="flex flex-row items-center"
+            style={{
+              gap: scaled(header.controls.gap),
+              paddingTop: scaled(header.controls.rowTopPadding),
+            }}>
             {!isLoginPage ? (
               <Button
                 icon={robotStatus.robotDangerStatus ? 'pause' : 'play'}
@@ -1047,18 +1061,26 @@ export const Header = () => {
 
             {!isLoginPage ? (
               <TouchableOpacity
-                className="flex flex-row items-center gap-2 rounded-full bg-white p-3 px-4"
+                className="flex flex-row items-center rounded-full bg-white"
+                style={{
+                  gap: scaled(header.controls.gap),
+                  paddingHorizontal: scaled(header.controls.pillHorizontalPadding),
+                  paddingVertical: scaled(header.controls.pillVerticalPadding),
+                }}
                 onPress={openWifiSetting}>
                 <WifiHigh size={18} weight="bold" />
-                <Text className="text-sm text-gray-800">
-                  {robotWifiButtonLabel}
-                </Text>
+                <Text className="text-sm text-gray-800">{robotWifiButtonLabel}</Text>
               </TouchableOpacity>
             ) : null}
 
             {!isSettingPage ? (
               <TouchableOpacity
-                className="flex flex-row items-center gap-2 rounded-full bg-white p-3 px-4"
+                className="flex flex-row items-center rounded-full bg-white"
+                style={{
+                  gap: scaled(header.controls.gap),
+                  paddingHorizontal: scaled(header.controls.pillHorizontalPadding),
+                  paddingVertical: scaled(header.controls.pillVerticalPadding),
+                }}
                 onPress={gotoSetting}>
                 <Gear size={18} weight="bold" />
                 <Text className="text-sm text-gray-800">{t('common.settings')}</Text>

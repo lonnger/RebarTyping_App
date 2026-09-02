@@ -8,6 +8,8 @@ import { ControlManualControl } from '../control-manual-control';
 import { ControlSegmented } from '../control-segmented';
 
 import { Command } from '@/constants/command';
+import { HOME_LAYOUT } from '@/constants/home-layout';
+import { scaleHomeValue, useHomeLayoutScale } from '@/hooks/useHomeLayoutScale';
 import useStore from '@/store';
 import { ROBOT_CURRENT_MODE } from '@/types';
 import { sendCmdDispatch } from '@/utils/helper';
@@ -26,6 +28,8 @@ export const LockMode = () => {
 export const ControlBar = () => {
   const { robotStatus, workParams, setRobotStatus } = useStore((state) => state);
   const { t } = useTranslation();
+  const { scale } = useHomeLayoutScale();
+  const scaled = (value: number) => scaleHomeValue(value, scale);
 
   // 点击开始
   const startTyping = () => {
@@ -65,19 +69,40 @@ export const ControlBar = () => {
   };
 
   return (
-    <Card className="relative" style={{ marginTop: -10 }}>
-      <View className="flex  w-full flex-col justify-between px-8 pb-5 pt-2">
-        <View className="flex flex-col items-center">
+    <Card className="relative" style={{ flex: 1 }}>
+      <View
+        className="flex h-full w-full flex-col"
+        style={{
+          paddingHorizontal: scaled(HOME_LAYOUT.right.contentPaddingHorizontal),
+          paddingTop: scaled(HOME_LAYOUT.right.contentPaddingTop),
+          paddingBottom: scaled(HOME_LAYOUT.right.contentPaddingBottom),
+        }}>
+        <View
+          style={{
+            width: '100%',
+            alignItems: 'center',
+            paddingBottom: scaled(HOME_LAYOUT.right.operationContentBottomSpacing),
+          }}>
           <View className="mb-2 mt-3 flex flex-row items-center justify-center">
             <Icon source="robot-happy-outline" size={22} />
-            <Text className="ml-2 text-center text-xl font-bold">
-              {t('common.robotOperation')}
-            </Text>
+            <Text className="ml-2 text-center text-xl font-bold">{t('common.robotOperation')}</Text>
           </View>
-          <ControlSegmented/>
-          <View className="min-h-[200px]">{renderControl()}</View>
+          <ControlSegmented />
+          <View style={{ minHeight: scaled(HOME_LAYOUT.right.controlAreaMinHeight) }}>
+            {renderControl()}
+          </View>
         </View>
-        {robotStatus.currentMode !== ROBOT_CURRENT_MODE.LOCKED ? <ControlExtraModule /> : null}
+        {robotStatus.currentMode !== ROBOT_CURRENT_MODE.LOCKED ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: scaled(HOME_LAYOUT.right.contentPaddingHorizontal),
+              right: scaled(HOME_LAYOUT.right.contentPaddingHorizontal),
+              bottom: HOME_LAYOUT.right.extraButtonsBottomSpacing,
+            }}>
+            <ControlExtraModule />
+          </View>
+        ) : null}
       </View>
     </Card>
   );

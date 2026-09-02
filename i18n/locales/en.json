@@ -52,7 +52,7 @@
       "allow": "Allow",
       "moreFeatures": "More features",
       "changingOrbitTips": "Changing orbit, please wait",
-      "currentSkipBindingCount": "Current skip binding count",
+      "currentSkipBindingCount": "Skip binding count",
       "releaseDangerStatusTips": "Release danger status",
       "longPressReleaseDangerStatusTips": "Long press to release danger status",
       "lockScreenTips": "Lock screen",

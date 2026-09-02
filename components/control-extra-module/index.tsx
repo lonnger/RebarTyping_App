@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import { DownState, RebootState } from '@/constants';
 import { Command } from '@/constants/command';
+import { HOME_LAYOUT } from '@/constants/home-layout';
+import { scaleHomeValue, useHomeLayoutScale } from '@/hooks/useHomeLayoutScale';
 import useStore, { initWorkParams } from '@/store';
 import { ROBOT_CURRENT_MODE } from '@/types';
 import { globalGetConnect, sendCmdDispatch, sendCmdWithRepeat } from '@/utils/helper';
@@ -13,13 +15,23 @@ import { SocketManage } from '@/utils/socketManage';
 export const ControlExtraModule = () => {
   const { robotStatus, workParams, setWorkParams } = useStore((state) => state);
   const { t } = useTranslation();
+  const { scale } = useHomeLayoutScale();
+  const extraButtonsGap = scaleHomeValue(HOME_LAYOUT.right.extraButtonsGap, scale);
+  const extraButtonsFontSize = Math.max(
+    10,
+    scaleHomeValue(HOME_LAYOUT.right.extraButtonsFontSize, scale)
+  );
+  const extraButtonContentPaddingHorizontal = scaleHomeValue(
+    HOME_LAYOUT.right.extraButtonContentPaddingHorizontal,
+    scale
+  );
   const isInLockedMode = () => {
     if (robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED) {
       showNotifier({
         title: t('errors.lockModeTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return true;
     }
@@ -36,7 +48,7 @@ export const ControlExtraModule = () => {
         title: t('errors.autoFindPointTips3'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return;
     }
@@ -55,13 +67,12 @@ export const ControlExtraModule = () => {
   };
 
   const robotDown = () => {
-
     if (workParams.auto_find_point) {
       showNotifier({
         title: t('errors.autoFindPointTips2'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return;
     }
@@ -72,7 +83,7 @@ export const ControlExtraModule = () => {
       () => {
         sendCmdDispatch(Command.manualModel);
       },
-      2,
+      3,
       30
     );
   };
@@ -87,7 +98,7 @@ export const ControlExtraModule = () => {
         title: t('errors.autoFindPointTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       return;
     }
@@ -109,7 +120,6 @@ export const ControlExtraModule = () => {
     }
 
     sendCmdDispatch(Command.lashedReboot);
-
   };
 
   const triggerTrack = () => {
@@ -118,25 +128,61 @@ export const ControlExtraModule = () => {
 
   return (
     <View className="relative flex w-full flex-row items-end justify-center">
-      <View className="flex flex-row gap-x-5 gap-y-5">
+      <View
+        className="flex flex-row"
+        style={{
+          width: HOME_LAYOUT.right.extraButtonsRowWidth,
+          rowGap: extraButtonsGap,
+          columnGap: extraButtonsGap,
+          flexWrap: 'nowrap',
+          justifyContent: 'center',
+        }}>
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (
-          <Button icon="reload" mode="elevated" onPress={robotReboot}>
-            <Text>{t('common.tyingRobotRestart')}</Text>
+          <Button
+            compact
+            icon="reload"
+            mode="elevated"
+            style={{ flex: 1 }}
+            contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
+            labelStyle={{ fontSize: extraButtonsFontSize }}
+            onPress={robotReboot}>
+            {t('common.tyingRobotRestart')}
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
-          <Button icon="content-cut" mode="elevated" onPress={cutWire}>
-            <Text>{t('common.cutWire')}</Text>
+          <Button
+            compact
+            icon="content-cut"
+            mode="elevated"
+            style={{ flex: 1 }}
+            contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
+            labelStyle={{ fontSize: extraButtonsFontSize }}
+            onPress={cutWire}>
+            {t('common.cutWire')}
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
-          <Button icon="restart" mode="elevated" onPress={triggerTrack}>
-            <Text>{t('common.triggertrack')}</Text>
+          <Button
+            compact
+            icon="restart"
+            mode="elevated"
+            style={{ flex: 1 }}
+            contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
+            labelStyle={{ fontSize: extraButtonsFontSize }}
+            onPress={triggerTrack}>
+            {t('common.triggertrack')}
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (
-          <Button icon="elevator-down" mode="elevated" onPress={robotDown}>
-            <Text>{t('common.machineDown')}</Text>
+          <Button
+            compact
+            icon="elevator-down"
+            mode="elevated"
+            style={{ flex: 1 }}
+            contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
+            labelStyle={{ fontSize: extraButtonsFontSize }}
+            onPress={robotDown}>
+            {t('common.machineDown')}
           </Button>
         ) : null}
       </View>

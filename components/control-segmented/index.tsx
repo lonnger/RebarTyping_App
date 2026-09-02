@@ -3,16 +3,20 @@ import { View } from 'react-native';
 import { SegmentedButtons } from 'react-native-paper';
 
 import { Command, userDefaultEvent } from '@/constants/command';
+import { HOME_LAYOUT } from '@/constants/home-layout';
+import { scaleHomeValue, useHomeLayoutScale } from '@/hooks/useHomeLayoutScale';
 import useStore from '@/store';
 import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
 import eventBus from '@/utils/eventBus';
 import { sendCmdDispatch, sendCmdWithRepeat } from '@/utils/helper';
-import { useEffect } from 'react';
 // 控制分段按钮组件 - 切换工作模式
 export const ControlSegmented = () => {
   //全局状态库中获取机器人状态
   const { robotStatus, setRobotStatus } = useStore((state) => state);
   const { t } = useTranslation();
+  const { modeSelector } = HOME_LAYOUT.right;
+  const { scale } = useHomeLayoutScale();
+  const scaled = (value: number) => scaleHomeValue(value, scale);
   //4.17新增：监听机器人当前模式的变化，打印日志
 
   //console.log('[ControlSegmented] robotStatus.currentMode ->', robotStatus.currentMode);
@@ -108,7 +112,13 @@ export const ControlSegmented = () => {
   // }, [setRobotStatus, setDebugLog]);
 
   return (
-    <View className="mb-10 mt-4 w-full gap-y-5">
+    <View
+      className="w-full"
+      style={{
+        marginTop: scaled(modeSelector.marginTop),
+        marginBottom: scaled(modeSelector.marginBottom),
+        gap: scaled(modeSelector.rowGap),
+      }}>
       <SegmentedButtons
         value={robotStatus.currentMode}
         density="medium"
@@ -129,7 +139,7 @@ export const ControlSegmented = () => {
             label: t('common.lock'),
             icon: 'lock',
             checkedColor: '#ffffff',
-            labelStyle: { fontSize: 11 },
+            labelStyle: { fontSize: Math.max(10, scaled(modeSelector.labelFontSize)) },
             style: {
               backgroundColor:
                 robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED ? '#012641' : 'transparent',
@@ -140,7 +150,7 @@ export const ControlSegmented = () => {
             label: t('common.manual'),
             icon: 'camera-control',
             checkedColor: '#ffffff',
-            labelStyle: { fontSize: 11 },
+            labelStyle: { fontSize: Math.max(10, scaled(modeSelector.labelFontSize)) },
             style: {
               backgroundColor:
                 robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? '#012641' : 'transparent',
@@ -151,7 +161,7 @@ export const ControlSegmented = () => {
             label: t('common.auto'),
             icon: 'robot-mower-outline',
             checkedColor: '#ffffff',
-            labelStyle: { fontSize: 11 },
+            labelStyle: { fontSize: Math.max(10, scaled(modeSelector.labelFontSize)) },
             style: {
               backgroundColor:
                 robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? '#012641' : 'transparent',
@@ -188,7 +198,7 @@ export const ControlSegmented = () => {
               label: t('common.noLashed'),
               icon: 'not-equal-variant',
               checkedColor: '#ffffff',
-              labelStyle: { fontSize: 11 },
+              labelStyle: { fontSize: Math.max(10, scaled(modeSelector.labelFontSize)) },
               style: {
                 backgroundColor:
                   robotStatus.currentBindingMode === ROBOT_WORK_MODE.WITHOUT_BINDING
@@ -201,7 +211,7 @@ export const ControlSegmented = () => {
               label: t('common.fullLashed'),
               icon: 'transit-connection',
               checkedColor: '#ffffff',
-              labelStyle: { fontSize: 11 },
+              labelStyle: { fontSize: Math.max(10, scaled(modeSelector.labelFontSize)) },
               style: {
                 backgroundColor:
                   robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING
@@ -214,7 +224,7 @@ export const ControlSegmented = () => {
               label: t('common.skipLashed'),
               icon: 'transit-skip',
               checkedColor: '#ffffff',
-              labelStyle: { fontSize: 11 },
+              labelStyle: { fontSize: Math.max(10, scaled(modeSelector.labelFontSize)) },
               style: {
                 backgroundColor:
                   robotStatus.currentBindingMode === ROBOT_WORK_MODE.SKIP_BINDING
