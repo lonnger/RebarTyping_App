@@ -49,9 +49,21 @@ export const DataInspect = () => {
         <DataTable>
           {items.map((item) => (
             <DataTable.Row key={item.key}>
-              <DataTable.Cell>{item.name}</DataTable.Cell>
-              <DataTable.Cell numeric>{item.value}</DataTable.Cell>
-              <DataTable.Cell numeric>{item.unit}</DataTable.Cell>
+              <DataTable.Cell style={{ flex: 3 }}>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  numberOfLines={2}
+                  style={{ flexShrink: 1, fontSize: 13 }}>
+                  {item.name}
+                </Text>
+              </DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 0.75 }}>
+                {item.value}
+              </DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 0.45 }}>
+                {item.unit}
+              </DataTable.Cell>
             </DataTable.Row>
           ))}
         </DataTable>

@@ -6,6 +6,7 @@
     "pause": "暂停",
     "stop": "暂停",
     "paramsSetting": "参数设置",
+    "longPressParameterSettingsTips": "长按进入参数设置",
     "softStop": "软急停",
     "cancel": "取消",
     "confirm": "确认",
@@ -25,8 +26,8 @@
     "username": "用户名",
     "password": "密码",
     "iKnow": "我知道了",
-    "guide_book": "《钢筋绑扎机器人用户手册》",
-    "autoLogin": "下次启动时自动进入该账户",
+    "guide_book": "《钢筋绑扎机器人RBTS1用户手册》",
+    "autoLogin": "下次自动登录",
     "promise": "承诺已知悉",
     "promiseContent": "的全部内容",
     "loginSuccess": "登录成功",
@@ -71,6 +72,19 @@
     "leftChange": "触发左边轨",
     "rightChange": "触发右边轨"
   },
+  "userManual": {
+    "safetyTitle": "操作前安全须知",
+    "introduction": "为保障人员及设备安全，操作人员在启动和使用RBTS1钢筋绑扎机器人前，必须阅读、理解并遵守以下要求：",
+    "training": "操作人员必须完成本公司提供或认可的培训，并取得有效的培训合格证明后方可操作本机。未取得培训合格证明而擅自操作的，相关风险与后果由操作人员及其所属单位自行承担。",
+    "preOperationInspection": "每次作业前应检查机器结构、绑扎枪、丝盘、电池、传感器、急停及防护装置。发现松动、破损、卡滞、异常报警或其他故障时，禁止启动机器。",
+    "personalProtection": "操作人员必须遵守现场安全管理规定，并按要求佩戴安全帽、防护手套、安全鞋及适用的防坠落装备。",
+    "exclusionZone": "机器运行期间应设置安全作业区，禁止无关人员靠近。严禁将手、脚或身体其他部位伸入绑扎枪、运动机构或机器下方。",
+    "startupProcedure": "开机及电机自检完成后，应确认设备无故障报警，再执行“机器下降”，将机器降至工作位置；确认机器稳定后方可开始作业。",
+    "authorisedSettings": "仅可在规定范围内设置作业参数。未经本公司书面许可，不得改装机器、拆除防护装置、屏蔽传感器或绕过安全控制功能。",
+    "faultResponse": "如出现异常声音、异常动作、通信中断、卡丝或故障报警，应立即停止作业并启动急停。排除危险并由合资格人员确认安全前，不得重新启动。",
+    "maintenance": "清洁、换丝、排除卡滞、检查或维修前，必须停机、断开电源并确认运动部件完全停止。维修工作仅限获授权的合资格人员进行。",
+    "disclaimer": "本安全须知不能替代完整的设备说明书、现场风险评估及当地适用的安全法规。"
+  },
   "errorsMap": {
     "errorInfo0": "电量低于10%",
     "errorInfo1": "电量低于20%",
@@ -88,6 +102,11 @@
   },
   "wifi": {
     "reconnect": "重连",
+    "connectInternetWifi": "连接上网WiFi",
+    "refresh": "刷新",
+    "scanningInternetWifi": "正在搜索可上网WiFi...",
+    "noInternetWifi": "未找到可上网WiFi",
+    "robotWifiHidden": "此处不会显示以ESP开头的机器WiFi。",
     "connectDialogTips": "WIFI/SOCKET连接提示",
     "connectDialogTitle": "如果连接失败，可点击右上角Wi-Fi图标选择ESP-前缀WiFi进行手动连接",
     "connectRobotWifi": "连接机器WiFi",
@@ -98,6 +117,7 @@
     "enterPassword": "请输入密码",
     "autoConnect": "是否自动连接",
     "savedPassword": "的保存密码",
+    "savedNetworkDetected": "检测到 {{ssid}} 的已保存密码，是否自动重连？",
     "noWifi": "暂无可以连接的WiFi",
     "connectFailed": "ESP WiFi 连接失败",
     "connectionErrors": {
@@ -129,6 +149,8 @@
     "noWifiList": "未找到机器人WiFi",
     "noWifiListTips": "部分安卓系统原因无法获取/连接到当前WiFi, 请到设置界面寻找ESP-前缀WiFi进行手动连接",
     "useSavedPasswordTips": "使用保存的密码连 接",
+    "useSavedPasswordPrompt": "是否使用已保存的密码连接 {{ssid}}？",
+    "savedPasswordTitle": "使用已保存密码",
     "useNewPasswordTips": "使用新密码连接",
     "passwordEmptyOrWifiNotSelected": "密码不能为空 或 未选择WiFi",
     "wifiGetFailed": "WiFi获取失败，请检查权限设置",
@@ -137,10 +159,13 @@
     "needWifiPermission": "需要WiFi权限才能搜索网络",
     "ssidPermissionRequired": "请授予位置和附近设备权限，否则WiFi连接受阻",
     "needLocationPermission": "需要位置权限才能搜索网络",
+    "wifiPermissionTitle": "WiFi权限",
+    "wifiPermissionMessage": "需要位置权限",
     "autoReconnect": "自动重连",
     "noSavedPassword": "没有找到保存的密码",
     "reconnectWifi": "请重新连接WiFi",
     "inputWifiPassword": "输入WiFi密码",
+    "inputWifiPasswordFor": "输入 {{ssid}} 的WiFi密码",
     "switchWifi": "已切换到",
     "notRobotWifi": "这可能不是机器人WiFi",
     "socketNotConnected": "socket没有正确连接",
@@ -179,12 +204,17 @@
     "currentBindingModeNotSupported": "当前绑扎模式不支持",
     "autoFindPointTips8": "自动寻点开启，无法开启防坠落激光",
     "lowerLayerRebarLengthExceedsRange": "下层钢筋长度超出范围",
+    "lowerLayerRebarLengthMessage": "请输入 {{min}} mm 至 {{max}} mm 之间的长度。",
     "upperLayerRebarDiameterExceedsRange": "上层钢筋直径超出范围",
+    "upperLayerRebarDiameterMessage": "请输入 {{min}} mm 至 {{max}} mm 之间的直径。",
     "lowerLayerRebarDiameterExceedsRange": "下层钢筋直径超出范围",
+    "lowerLayerRebarDiameterMessage": "请输入 {{min}} mm 至 {{max}} mm 之间的直径。",
     "parameterValueCannotBeEmpty": "参数值不能为空",
     "robotNotConnected": "请检查机器人是否连接",
     "nodeLaserRangeExceedsRange": "节点激光范围超出范围",
+    "nodeLaserRangeMessage": "请输入 {{min}} mm 至 {{max}} mm 之间的检测范围。",
     "trackLaserRangeExceedsRange": "变轨激光范围超出范围",
+    "trackLaserRangeMessage": "请输入 {{min}} mm 至 {{max}} mm 之间的检测范围。",
     "pleaseCheckTheRobotStatusIfItIsInSoftEmergencyStopStatus": "请检查机器人状态是否处于软急停状态"
   },
   "robot": {
@@ -210,6 +240,7 @@
     "companyAddress": "公司地址",
     "companyName": "公司名称",
     "phoneNumber": "联系电话",
+    "back": "返回",
     "versionUpdate": "版本更新",
     "currentVersion": "当前版本：{{version}}",
     "close": "关闭"
@@ -224,8 +255,9 @@
     "history": "历史故障记录",
     "next": "下一页",
     "prev": "上一页",
+    "pagination": "第 {{current}} 页 / 共 {{total}} 页",
     "total": "共",
     "the": "第",
     "page": "页"
   }
-} 
+}

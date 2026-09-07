@@ -124,9 +124,9 @@ export const useStore = create<State>((set) => ({
   canLoginInfo: {
     company: 'HKCRC',
     id: 0,
-    name: 'admin',
+    name: 'Castor',
     number: '85223563130',
-    password: 'hkcrc',
+    password: 'hlzz',
     position: 'HongKong',
   },
   setCanLoginInfo: (newInfo: { [key: string]: any }) =>

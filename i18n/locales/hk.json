@@ -6,6 +6,7 @@
     "pause": "暫停",
     "stop": "结束",
     "paramsSetting": "參數設置",
+    "longPressParameterSettingsTips": "長按進入參數設置",
     "softStop": "軟急停",
     "cancel": "取消",
     "confirm": "確認",
@@ -25,8 +26,8 @@
     "username": "用戶名",
     "password": "密碼",
     "iKnow": "我知道了",
-    "guide_book": "《鋼筋綁紮機器人用戶手冊》",
-    "autoLogin": "下次啟動時自動進入該賬戶",
+    "guide_book": "《鋼筋綁紮機器人RBTS1用戶手冊》",
+    "autoLogin": "下次自動登錄",
     "promise": "承諾已知悉",
     "promiseContent": "的全部內容",
     "loginSuccess": "登錄成功",
@@ -38,6 +39,7 @@
     "skipLashed": "跳扎",
     "lockMode": "鎖止模式",
     "tyingRobotRestart": "剪斷絲線",
+    "cutWire": "剪斷絲線",
     "machineRestart": "機器復位",
     "triggertrack": "觸發變軌",
     "machineDown": "機器下降",
@@ -70,6 +72,19 @@
     "leftChange": "觸發左邊軌",
     "rightChange": "觸發右邊軌"
   },
+  "userManual": {
+    "safetyTitle": "操作前安全須知",
+    "introduction": "為保障人員及設備安全，操作人員在啟動和使用RBTS1鋼筋綁紮機器人前，必須閱讀、理解並遵守以下要求：",
+    "training": "操作人員必須完成本公司提供或認可的培訓，並取得有效的培訓合格證明後方可操作本機。未取得培訓合格證明而擅自操作的，相關風險與後果由操作人員及其所屬單位自行承擔。",
+    "preOperationInspection": "每次作業前應檢查機器結構、綁紮槍、絲盤、電池、感測器、急停及防護裝置。發現鬆動、破損、卡滯、異常警報或其他故障時，禁止啟動機器。",
+    "personalProtection": "操作人員必須遵守現場安全管理規定，並按要求佩戴安全帽、防護手套、安全鞋及適用的防墜落裝備。",
+    "exclusionZone": "機器運行期間應設置安全作業區，禁止無關人員靠近。嚴禁將手、腳或身體其他部位伸入綁紮槍、運動機構或機器下方。",
+    "startupProcedure": "開機及電機自檢完成後，應確認設備無故障警報，再執行「機器下降」，將機器降至工作位置；確認機器穩定後方可開始作業。",
+    "authorisedSettings": "僅可在規定範圍內設置作業參數。未經本公司書面許可，不得改裝機器、拆除防護裝置、屏蔽感測器或繞過安全控制功能。",
+    "faultResponse": "如出現異常聲音、異常動作、通訊中斷、卡絲或故障警報，應立即停止作業並啟動急停。排除危險並由合資格人員確認安全前，不得重新啟動。",
+    "maintenance": "清潔、換絲、排除卡滯、檢查或維修前，必須停機、斷開電源並確認運動部件完全停止。維修工作僅限獲授權的合資格人員進行。",
+    "disclaimer": "本安全須知不能替代完整的設備說明書、現場風險評估及當地適用的安全法規。"
+  },
   "errorsMap": {
     "errorInfo0": "電量低於10%",
     "errorInfo1": "電量低於20%",
@@ -87,6 +102,11 @@
   },
   "wifi": {
     "reconnect": "重新連接",
+    "connectInternetWifi": "連接上網WiFi",
+    "refresh": "刷新",
+    "scanningInternetWifi": "正在搜尋可上網WiFi...",
+    "noInternetWifi": "未找到可上網WiFi",
+    "robotWifiHidden": "此處不會顯示以ESP開頭的機器WiFi。",
     "selectWifi": "選擇WiFi",
     "detected": "檢測到",
     "connectDialogTips": "WIFI/SOCKET連接提示",
@@ -97,6 +117,7 @@
     "enterPassword": "請輸入密碼",
     "autoConnect": "是否自動連接",
     "savedPassword": "的保存密碼",
+    "savedNetworkDetected": "檢測到 {{ssid}} 的已保存密碼，是否自動重連？",
     "noWifi": "暫無可以連接的WiFi",
     "connectFailed": "ESP WiFi 連接失敗",
     "connectionErrors": {
@@ -128,6 +149,8 @@
     "noWifiList": "未找到機器人WiFi",
     "noWifiListTips": "部分安卓系統原因無法獲取/連接到當前WiFi, 請到設置界面尋找ESP-前綴WiFi進行手動連接",
     "useSavedPasswordTips": "使用保存的密碼連接",
+    "useSavedPasswordPrompt": "是否使用已保存的密碼連接 {{ssid}}？",
+    "savedPasswordTitle": "使用已保存密碼",
     "useNewPasswordTips": "使用新密碼連接",
     "passwordEmptyOrWifiNotSelected": "密碼不能為空 或 未選擇WiFi",
     "wifiGetFailed": "WiFi獲取失敗，請檢查權限設置",
@@ -142,6 +165,7 @@
     "noSavedPassword": "沒有找到保存的密碼",
     "reconnectWifi": "請重新連接WiFi",
     "inputWifiPassword": "輸入WiFi密碼",
+    "inputWifiPasswordFor": "輸入 {{ssid}} 的WiFi密碼",
     "switchWifi": "已切換到",
     "notRobotWifi": "這可能不是機器人WiFi",
     "socketNotConnected": "socket未正確連接",
@@ -180,12 +204,17 @@
     "currentBindingModeNotSupported": "當前綁扎模式不支持",
     "autoFindPointTips8": "自動尋點模式下，無法開啟防墜落激光",
     "lowerLayerRebarLengthExceedsRange": "下層鋼筋長度超出範圍",
+    "lowerLayerRebarLengthMessage": "請輸入 {{min}} mm 至 {{max}} mm 之間的長度。",
     "upperLayerRebarDiameterExceedsRange": "上層鋼筋直徑超出範圍",
+    "upperLayerRebarDiameterMessage": "請輸入 {{min}} mm 至 {{max}} mm 之間的直徑。",
     "lowerLayerRebarDiameterExceedsRange": "下層鋼筋直徑超出範圍",
+    "lowerLayerRebarDiameterMessage": "請輸入 {{min}} mm 至 {{max}} mm 之間的直徑。",
     "parameterValueCannotBeEmpty": "參數值不能為空",
     "robotNotConnected": "請檢查機器人是否連接",
     "nodeLaserRangeExceedsRange": "節點激光範圍超出範圍",
+    "nodeLaserRangeMessage": "請輸入 {{min}} mm 至 {{max}} mm 之間的檢測範圍。",
     "trackLaserRangeExceedsRange": "變軌激光範圍超出範圍",
+    "trackLaserRangeMessage": "請輸入 {{min}} mm 至 {{max}} mm 之間的檢測範圍。",
     "pleaseCheckTheRobotStatusIfItIsInSoftEmergencyStopStatus": "請檢查機器人狀態是否處於軟急停狀態"
   },
   "robot": {
@@ -226,8 +255,9 @@
     "history": "歷史故障記錄",
     "next": "下一頁",
     "prev": "上一頁",
+    "pagination": "第 {{current}} 頁 / 共 {{total}} 頁",
     "total": "共",
     "the": "第",
     "page": "頁"
   }
-} 
+}

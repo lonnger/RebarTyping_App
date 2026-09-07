@@ -62,7 +62,9 @@ export const StatusBox = () => {
         icon="cog"
         mode="contained"
         style={{ width: center.buttonWidth }}
-        onPress={openSettingModal}>
+        accessibilityHint={t('common.longPressParameterSettingsTips')}
+        delayLongPress={800}
+        onLongPress={openSettingModal}>
         <Text>{t('common.paramsSetting')}</Text>
       </Button>
     </View>

@@ -67,7 +67,10 @@ export const ParamsSettingModal = ({ visible, onDismiss }: ParamsSettingModalPro
     ) {
       Alert.alert(
         t('errors.trackLaserRangeExceedsRange'),
-        `${t('errors.trackLaserRangeExceedsRange')}，${t('common.needToSet')} ${workParamsRange.orbitInputMin}mm~${workParams.inputOrbitMax}mm ${t('common.between')}`
+        t('errors.trackLaserRangeMessage', {
+          min: workParamsRange.orbitInputMin,
+          max: workParams.inputOrbitMax,
+        })
       );
       return;
     }
@@ -79,7 +82,10 @@ export const ParamsSettingModal = ({ visible, onDismiss }: ParamsSettingModalPro
     ) {
       Alert.alert(
         t('errors.nodeLaserRangeExceedsRange'),
-        `${t('errors.nodeLaserRangeExceedsRange')}，${t('common.needToSet')} ${workParamsRange.nodeMin}mm~${workParams.inputNodeMax}mm ${t('common.between')}`
+        t('errors.nodeLaserRangeMessage', {
+          min: workParamsRange.nodeMin,
+          max: workParams.inputNodeMax,
+        })
       );
       return;
     }
@@ -123,7 +129,10 @@ export const ParamsSettingModal = ({ visible, onDismiss }: ParamsSettingModalPro
         if (temp3 < workParamsRange.inputMin || temp3 > workParamsRange.inputMax) {
           Alert.alert(
             t('errors.upperLayerRebarDiameterExceedsRange'),
-            `${t('errors.upperLayerRebarDiameterExceedsRange')}，${t('common.needToSet')} ${workParamsRange.inputMin}mm~${workParamsRange.inputMax}mm ${t('common.between')}`
+            t('errors.upperLayerRebarDiameterMessage', {
+              min: workParamsRange.inputMin,
+              max: workParamsRange.inputMax,
+            })
           );
           return false;
         } else {
@@ -135,7 +144,10 @@ export const ParamsSettingModal = ({ visible, onDismiss }: ParamsSettingModalPro
         if (temp4 < workParamsRange.inputMin || temp4 > workParamsRange.inputMax) {
           Alert.alert(
             t('errors.lowerLayerRebarDiameterExceedsRange'),
-            `${t('errors.lowerLayerRebarDiameterExceedsRange')}，${t('common.between')} ${workParamsRange.inputMin}mm~${workParamsRange.inputMax}mm ${t('common.between')}`
+            t('errors.lowerLayerRebarDiameterMessage', {
+              min: workParamsRange.inputMin,
+              max: workParamsRange.inputMax,
+            })
           );
           return false;
         } else {
@@ -147,7 +159,10 @@ export const ParamsSettingModal = ({ visible, onDismiss }: ParamsSettingModalPro
         if (temp5 < workParamsRange.inputMin || temp5 > workParamsRange.inputMax) {
           Alert.alert(
             t('errors.lowerLayerRebarLengthExceedsRange'),
-            `${t('errors.lowerLayerRebarLengthExceedsRange')}，${t('common.needToSet')} ${workParamsRange.inputMin}mm~${workParamsRange.inputMax}mm ${t('common.between')}`
+            t('errors.lowerLayerRebarLengthMessage', {
+              min: workParamsRange.inputMin,
+              max: workParamsRange.inputMax,
+            })
           );
           return false;
         } else {

@@ -53,7 +53,7 @@ class MyDatabaase {
         `CREATE TABLE IF NOT EXISTS user(id INTEGER PRIMARY KEY NOT NULL,name TEXT NOT NULL,password TEXT NOT NULL,company TEXT,position TEXT,number TEXT)`
       );
       await this.db.execAsync(
-        'INSERT OR IGNORE INTO user VALUES(0,"admin","hkcrc","HKCRC","HongKong","85223563130")'
+        'INSERT OR REPLACE INTO user VALUES(0,"Castor","hlzz","HKCRC","HongKong","85223563130")'
       );
     }
   }

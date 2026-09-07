@@ -15,7 +15,7 @@ export default function Error() {
   const [items, setItems] = useState<{ key: number; index: string; time: string; name: string }[]>(
     []
   );
-  const [itemsPerPage, onItemsPerPageChange] = useState(numberOfItemsPerPageList[0]);
+  const [itemsPerPage] = useState(numberOfItemsPerPageList[0]);
   const [currentPage, setCurrentPage] = useState(0);
   const { errorGroup } = useStore((state) => state);
   const { t } = useTranslation();
@@ -48,6 +48,7 @@ export default function Error() {
   const totalPages = useMemo(() => {
     return Math.ceil(items.length / itemsPerPage);
   }, [items.length, itemsPerPage]);
+  const displayedPage = totalPages === 0 ? 0 : currentPage + 1;
 
   const handlePrevPage = () => {
     if (currentPage > 0) {
@@ -113,24 +114,34 @@ export default function Error() {
               <Text className="my-5 text-center text-lg font-bold">{t('malfunction.noData')}</Text>
             )}
 
-            <View className="mt-5 flex flex-row items-center justify-center gap-x-16">
+            <View className="mt-5 flex w-full flex-row items-center justify-between">
               <TouchableOpacity
-                className={`flex flex-row items-center gap-x-1 ${currentPage === 0 ? 'opacity-50' : ''}`}
+                className={`flex flex-1 flex-row items-center justify-start ${currentPage === 0 ? 'opacity-50' : ''}`}
                 onPress={handlePrevPage}
                 disabled={currentPage === 0}>
-                <Icon source="menu-left" size={30} />
-                <Text className="text-md">{t('malfunction.prev')}</Text>
+                <Icon source="menu-left" size={26} />
+                <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1}>
+                  {t('malfunction.prev')}
+                </Text>
               </TouchableOpacity>
-              <Text className="text-md">
-                {t('malfunction.the')} {currentPage + 1} {t('malfunction.page')} /{' '}
-                {t('malfunction.total')} {totalPages} {t('malfunction.page')}
+              <Text
+                adjustsFontSizeToFit
+                className="flex-[1.4] text-center text-base"
+                minimumFontScale={0.75}
+                numberOfLines={1}>
+                {t('malfunction.pagination', {
+                  current: displayedPage,
+                  total: totalPages,
+                })}
               </Text>
               <TouchableOpacity
-                className={`flex flex-row items-center gap-x-1 ${currentPage >= totalPages - 1 ? 'opacity-50' : ''}`}
+                className={`flex flex-1 flex-row items-center justify-end ${currentPage >= totalPages - 1 ? 'opacity-50' : ''}`}
                 onPress={handleNextPage}
                 disabled={currentPage >= totalPages - 1}>
-                <Text className="text-md">{t('malfunction.next')}</Text>
-                <Icon source="menu-right" size={30} />
+                <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1}>
+                  {t('malfunction.next')}
+                </Text>
+                <Icon source="menu-right" size={26} />
               </TouchableOpacity>
             </View>
 

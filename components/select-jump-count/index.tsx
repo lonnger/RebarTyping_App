@@ -76,7 +76,7 @@ export const SelectJumpCount = () => {
 
   return (
     <View className="flex flex-col items-start justify-center" style={{ marginTop: -20 }}>
-      <Text className="text-center text-lg font-bold">{t('common.currentSkipBindingCount')}</Text>
+      <Text className="text-center text-base font-bold">{t('common.currentSkipBindingCount')}</Text>
       <View className="flex flex-row items-center gap-x-5">
         {jumpCountList.map((item) => (
           <View key={item.value} className="flex flex-row items-center">

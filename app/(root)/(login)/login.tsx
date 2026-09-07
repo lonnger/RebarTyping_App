@@ -35,6 +35,16 @@ import { showNotifier } from '@/utils/notifier';
 
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
 const IP_LOCATION_REQUEST_TIMEOUT_MS = 7_000;
+const USER_MANUAL_ITEM_KEYS = [
+  'userManual.training',
+  'userManual.preOperationInspection',
+  'userManual.personalProtection',
+  'userManual.exclusionZone',
+  'userManual.startupProcedure',
+  'userManual.authorisedSettings',
+  'userManual.faultResponse',
+  'userManual.maintenance',
+] as const;
 const IP_LOCATION_ENDPOINTS = [
   {
     name: 'ipwho.is',
@@ -161,7 +171,7 @@ export default function Login() {
 
     if (username !== canLoginInfo.name || password !== canLoginInfo.password) {
       showNotifier({
-        title: t('errors.usernameOrPasswordError'),
+        title: t('errors.invalidCredentials'),
         type: 'error',
         duration: 3000,
         onPress: () => {},
@@ -604,7 +614,7 @@ export default function Login() {
     }
   };
 
-  const internetWifiButtonLabel = currentInternetWifiSSID || '连接上网 WiFi';
+  const internetWifiButtonLabel = currentInternetWifiSSID || t('wifi.connectInternetWifi');
 
   const headerHeight = 100;
   return (
@@ -646,16 +656,36 @@ export default function Login() {
                   justifyContent: 'space-between',
                   width: width / 3,
                 }}>
-                <View className="h-[85%] w-full">
-                  <View className="mb-2 flex flex-row items-center justify-center">
+                <View className="w-full flex-1">
+                  <View className="mb-4 flex flex-row items-center justify-center pt-6">
                     <Icon source="book-open-outline" size={22} />
-                    <Text className="-top-[1px] ml-2 py-8 text-center text-2xl font-bold">
+                    <Text
+                      adjustsFontSizeToFit
+                      className="ml-2 flex-shrink text-center text-2xl font-bold"
+                      minimumFontScale={0.75}
+                      numberOfLines={2}>
                       {t('common.guide_book')}
                     </Text>
                   </View>
-                  <Text className="text-center text-lg">Coming soon...</Text>
+                  <ScrollView
+                    className="w-full flex-1"
+                    contentContainerStyle={{ paddingBottom: 12 }}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator>
+                    <Text className="mb-4 text-base font-bold">{t('userManual.safetyTitle')}</Text>
+                    <Text className="mb-4 text-sm leading-5">{t('userManual.introduction')}</Text>
+                    {USER_MANUAL_ITEM_KEYS.map((key, index) => (
+                      <View key={key} className="mb-3 flex-row items-start">
+                        <Text className="mr-2 text-sm font-bold">{index + 1}.</Text>
+                        <Text className="flex-1 text-sm leading-5">{t(key)}</Text>
+                      </View>
+                    ))}
+                    <Text className="mt-1 text-xs leading-4 text-gray-600">
+                      {t('userManual.disclaimer')}
+                    </Text>
+                  </ScrollView>
                 </View>
-                <View className="bottom-4 flex h-1/5 items-center justify-center">
+                <View className="w-full items-center pb-4 pt-3">
                   <Button
                     mode="contained"
                     icon="check"
@@ -682,7 +712,9 @@ export default function Login() {
                   <View className="mb-5 flex flex-row items-center justify-between">
                     <View className="flex flex-row items-center">
                       <Icon source="wifi" size={22} />
-                      <Text className="ml-2 text-2xl font-bold">连接上网 WiFi</Text>
+                      <Text className="ml-2 text-2xl font-bold">
+                        {t('wifi.connectInternetWifi')}
+                      </Text>
                     </View>
 
                     <Button
@@ -692,7 +724,7 @@ export default function Login() {
                       loading={wifiScanning}
                       disabled={wifiScanning}
                       onPress={() => refreshInternetWifiList()}>
-                      刷新
+                      {t('wifi.refresh')}
                     </Button>
                   </View>
 
@@ -724,10 +756,10 @@ export default function Login() {
                       <View className="items-center justify-center gap-2 p-6">
                         <Icon source="wifi-off" size={24} />
                         <Text className="text-base font-bold text-gray-800">
-                          {wifiScanning ? '正在搜索 WiFi...' : '未找到可上网 WiFi'}
+                          {wifiScanning ? t('wifi.scanningInternetWifi') : t('wifi.noInternetWifi')}
                         </Text>
                         <Text className="text-center text-sm text-gray-500">
-                          此处会隐藏 ESP 开头的机器 WiFi
+                          {t('wifi.robotWifiHidden')}
                         </Text>
                       </View>
                     )}
@@ -739,9 +771,11 @@ export default function Login() {
                 visible={Platform.OS !== 'android' && savedPasswordDialogVisible}
                 style={{ width: '80%', left: '0%', right: '0%', marginHorizontal: 'auto' }}
                 onDismiss={() => setSavedPasswordDialogVisible(false)}>
-                <Dialog.Title>使用已保存密码?</Dialog.Title>
+                <Dialog.Title>{t('wifi.savedPasswordTitle')}</Dialog.Title>
                 <Dialog.Content>
-                  <Text>是否使用已保存密码连接 {currentSelectedWifi.current}?</Text>
+                  <Text>
+                    {t('wifi.useSavedPasswordPrompt', { ssid: currentSelectedWifi.current })}
+                  </Text>
                 </Dialog.Content>
                 <Dialog.Actions>
                   <Button
@@ -749,10 +783,10 @@ export default function Login() {
                       setSavedPasswordDialogVisible(false);
                       setWifiPasswordDialogVisible(true);
                     }}>
-                    输入新密码
+                    {t('wifi.useNewPasswordTips')}
                   </Button>
                   <Button onPress={connectWithSavedPassword}>
-                    <Text>使用保存密码</Text>
+                    <Text>{t('wifi.useSavedPasswordTips')}</Text>
                   </Button>
                 </Dialog.Actions>
               </Dialog>
@@ -761,11 +795,13 @@ export default function Login() {
                 visible={Platform.OS !== 'android' && wifiPasswordDialogVisible}
                 style={{ width: '80%', left: '0%', right: '0%', marginHorizontal: 'auto' }}
                 onDismiss={() => setWifiPasswordDialogVisible(false)}>
-                <Dialog.Title>输入 WiFi 密码 {currentSelectedWifi.current}</Dialog.Title>
+                <Dialog.Title>
+                  {t('wifi.inputWifiPasswordFor', { ssid: currentSelectedWifi.current })}
+                </Dialog.Title>
                 <Dialog.Content>
                   <TextInput
                     className="rounded-lg border-[0.5px] border-gray-400 px-4 py-3"
-                    placeholder="输入 WiFi 密码"
+                    placeholder={t('wifi.inputWifiPassword')}
                     value={wifiPassword}
                     secureTextEntry
                     onChangeText={setWifiPassword}
@@ -814,30 +850,36 @@ export default function Login() {
                       />
                     </View>
                     <View className="mt-5 flex flex-col items-start justify-center ">
-                      <View className="flex flex-row items-center justify-start">
+                      <View className="flex w-full flex-row items-start justify-start">
                         <Checkbox.Android
                           status={rememberpsw ? 'checked' : 'unchecked'}
                           onPress={() => {
                             setRememberpsw(!rememberpsw);
                           }}
                         />
-                        <Text className="text-md -mt-0.5">{t('common.autoLogin')}</Text>
+                        <Text
+                          className="mt-2.5 flex-1 pr-2 text-base leading-5"
+                          style={{ flexShrink: 1 }}>
+                          {t('common.autoLogin')}
+                        </Text>
                       </View>
 
-                      <View className="flex flex-row items-center justify-start">
+                      <View className="flex w-full flex-row items-start justify-start">
                         <Checkbox.Android
                           status={hasReadGuide ? 'checked' : 'unchecked'}
                           onPress={() => {
                             setHasReadGuide(!hasReadGuide);
                           }}
                         />
-                        <View className="flex flex-row items-center justify-start">
+                        <Text
+                          className="text-md mt-2.5"
+                          style={{ flex: 1, flexShrink: 1, flexWrap: 'wrap' }}>
                           <Text>{t('common.promise')}</Text>
-                          <TouchableOpacity onPress={openGuideDialog}>
-                            <Text className=" text-blue-500">{t('common.guide_book')}</Text>
-                          </TouchableOpacity>
-                          <Text className="text-md -mt-0.5">{t('common.promiseContent')}</Text>
-                        </View>
+                          <Text className="text-blue-500" onPress={openGuideDialog}>
+                            {t('common.guide_book')}
+                          </Text>
+                          <Text>{t('common.promiseContent')}</Text>
+                        </Text>
                       </View>
                     </View>
 

@@ -417,7 +417,7 @@ export const Header = () => {
     if (previousSSID && savedWifiPasswords[previousSSID]) {
       setTimeout(() => {
         GlobalSnackbarManager.current?.show({
-          content: `${t('wifi.detected')} ${previousSSID} ${t('wifi.savedPassword')}，${t('wifi.autoConnect')}？`,
+          content: t('wifi.savedNetworkDetected', { ssid: previousSSID }),
           action: t('common.reconnect'),
           actionCallback: () => autoReconnectWifi(previousSSID),
         });
@@ -1167,12 +1167,10 @@ export const Header = () => {
           style={{ width: '80%', left: '0%', right: '0%', marginHorizontal: 'auto' }}
           onDismiss={() => setSavedPasswordDialogVisible(false)}>
           <Dialog.Title>
-            {t('wifi.useSavedPasswordTips')} {currentSelectedWifi.current}?
+            {t('wifi.useSavedPasswordPrompt', { ssid: currentSelectedWifi.current })}
           </Dialog.Title>
           <Dialog.Content>
-            <Text>
-              {t('wifi.useSavedPasswordTips')} {currentSelectedWifi.current}?
-            </Text>
+            <Text>{t('wifi.useSavedPasswordPrompt', { ssid: currentSelectedWifi.current })}</Text>
           </Dialog.Content>
           <Dialog.Actions>
             <Button
