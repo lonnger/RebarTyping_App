@@ -26,7 +26,7 @@ import { clearOnlineLoginAt } from '@/utils/loginSession';
 import { SocketManage } from '@/utils/socketManage';
 
 export default function () {
-  const { canLoginInfo } = useStore((state) => state);
+  const { canLoginInfo, setAuthenticationStatus } = useStore((state) => state);
   const [language, setLanguage] = useState<'cn' | 'en' | 'hk'>('en');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
@@ -68,6 +68,7 @@ export default function () {
       console.warn('releaseEspWifiFromSystem error', error);
     }
     await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
+    setAuthenticationStatus('unauthenticated');
     router.dismissAll();
     router.replace('/(root)/(login)');
   };

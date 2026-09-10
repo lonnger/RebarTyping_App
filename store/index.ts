@@ -4,6 +4,8 @@ import { ChangeState, DownState, RebootState, workParamsRange } from '@/constant
 import { DIRECTION, ROBOT_CURRENT_MODE, ROBOT_WORK_MODE } from '@/types';
 
 interface State {
+  authenticationStatus: 'checking' | 'authenticated' | 'unauthenticated';
+  setAuthenticationStatus: (status: State['authenticationStatus']) => void;
   canLoginInfo: {
     company: string;
     id: number;
@@ -91,6 +93,8 @@ export const initWorkParams = {
 };
 
 export const useStore = create<State>((set) => ({
+  authenticationStatus: 'checking',
+  setAuthenticationStatus: (authenticationStatus) => set({ authenticationStatus }),
   robotStatus: {
     electric: 100, // 电量
     robotDangerStatus: false, // 软急停状态

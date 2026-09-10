@@ -1,6 +1,7 @@
 import { useAsyncStorage } from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import * as IntentLauncher from 'expo-intent-launcher';
+import * as Network from 'expo-network';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -91,7 +92,6 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [hasReadGuide, setHasReadGuide] = useState(false);
-  const [rememberpsw, setRememberpsw] = useState(true);
   const [showGuideDialog, setShowGuideDialog] = useState(false);
   const [internetWifiVisible, setInternetWifiVisible] = useState(false);
   const [internetWifiList, setInternetWifiList] = useState<WifiEntry[]>([]);
@@ -104,7 +104,7 @@ export default function Login() {
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   const { width, height } = Dimensions.get('screen');
-  const { canLoginInfo } = useStore((state) => state);
+  const { canLoginInfo, setAuthenticationStatus } = useStore((state) => state);
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
   const currentSelectedWifi = useRef('');
@@ -153,6 +153,19 @@ export default function Login() {
 
     return () => appStateListener.remove();
   }, [internetWifiVisible]);
+
+  useEffect(() => {
+    const networkStateListener = Network.addNetworkStateListener((networkState) => {
+      if (!networkState.isConnected || networkState.type !== Network.NetworkStateType.WIFI) {
+        setCurrentInternetWifiSSID('');
+        return;
+      }
+
+      fetchCurrentInternetWifiSSID();
+    });
+
+    return () => networkStateListener.remove();
+  }, []);
 
   const login = async () => {
     if (loadingLocation || ipLocationRequestInFlightRef.current) {
@@ -250,19 +263,16 @@ export default function Login() {
       return;
     }
 
-    if (rememberpsw) {
-      try {
-        // save user info to localstorage
-        await userInfo.setItem(
-          JSON.stringify({
-            id: canLoginInfo.id,
-            username,
-            password,
-          })
-        );
-      } catch (e) {
-        console.error(e);
-      }
+    try {
+      await userInfo.setItem(
+        JSON.stringify({
+          id: canLoginInfo.id,
+          username,
+          password,
+        })
+      );
+    } catch (e) {
+      console.error(e);
     }
 
     showNotifier({
@@ -271,7 +281,8 @@ export default function Login() {
       duration: 3000,
       onPress: () => {},
     });
-    router.replace('/(home)');
+    setAuthenticationStatus('authenticated');
+    router.replace('/(root)/(home)');
   };
 
   const openGuideDialog = () => {
@@ -352,10 +363,24 @@ export default function Login() {
 
   const fetchCurrentInternetWifiSSID = async () => {
     try {
+      const networkState = await Network.getNetworkStateAsync();
+      if (!networkState.isConnected || networkState.type !== Network.NetworkStateType.WIFI) {
+        setCurrentInternetWifiSSID('');
+        return;
+      }
+
+      if (Platform.OS === 'android' && !(await WifiManager.isEnabled())) {
+        setCurrentInternetWifiSSID('');
+        return;
+      }
+
       const connectedWifiSSID = await WifiManager.getCurrentWifiSSID();
-      setCurrentInternetWifiSSID(connectedWifiSSID || '');
+      const normalizedSSID = (connectedWifiSSID || '').replace(/^"|"$/g, '');
+      const isUnknownSSID = normalizedSSID.toLowerCase() === '<unknown ssid>';
+      setCurrentInternetWifiSSID(isUnknownSSID ? '' : normalizedSSID);
     } catch (error) {
       console.error('fetchCurrentInternetWifiSSID error', error);
+      setCurrentInternetWifiSSID('');
     }
   };
 
@@ -849,21 +874,7 @@ export default function Login() {
                         onSubmitEditing={login}
                       />
                     </View>
-                    <View className="mt-5 flex flex-col items-start justify-center ">
-                      <View className="flex w-full flex-row items-start justify-start">
-                        <Checkbox.Android
-                          status={rememberpsw ? 'checked' : 'unchecked'}
-                          onPress={() => {
-                            setRememberpsw(!rememberpsw);
-                          }}
-                        />
-                        <Text
-                          className="mt-2.5 flex-1 pr-2 text-base leading-5"
-                          style={{ flexShrink: 1 }}>
-                          {t('common.autoLogin')}
-                        </Text>
-                      </View>
-
+                    <View className="mt-5 w-full items-start justify-center">
                       <View className="flex w-full flex-row items-start justify-start">
                         <Checkbox.Android
                           status={hasReadGuide ? 'checked' : 'unchecked'}
@@ -876,7 +887,7 @@ export default function Login() {
                           style={{ flex: 1, flexShrink: 1, flexWrap: 'wrap' }}>
                           <Text>{t('common.promise')}</Text>
                           <Text className="text-blue-500" onPress={openGuideDialog}>
-                            {t('common.guide_book')}
+                            {t('common.guide_book_link')}
                           </Text>
                           <Text>{t('common.promiseContent')}</Text>
                         </Text>

@@ -41,32 +41,49 @@ export const Bootstrap = () => {
   const sessionRedirectingRef = useRef(false);
   //读取本地存储中的用户信息
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
-  const { setCanLoginInfo, canLoginInfo, robotStatus, setRobotStatus, setDebugLog } = useStore(
-    (state) => state
-  );
+  const { setCanLoginInfo, robotStatus, setRobotStatus, setDebugLog, setAuthenticationStatus } =
+    useStore((state) => state);
   const { t } = useTranslation();
 
   //挂载即执行
   useEffect(() => {
     printTerminalLogo();
-    databaseInit();  //初始化本地数据库并拉取用户信息
-    checkLogin();    //检查是否登录，未登录则跳转到登录页
-    setTimeout(async () => {
+    let cancelled = false;
+
+    const initializeApp = async () => {
       try {
+        await databaseInit();
+        const authenticated = await checkLogin();
+        if (cancelled) {
+          return;
+        }
+
+        setAuthenticationStatus(authenticated ? 'authenticated' : 'unauthenticated');
+        if (!authenticated) {
+          return;
+        }
+
         const connectedWifiSSID = (await WifiManager.getCurrentWifiSSID()) || '';
         if (connectedWifiSSID.indexOf(GlobalConst.wifiName) > -1) {
           await globalGetConnect();
         }
       } catch (error) {
-        console.warn('Initial robot WiFi check skipped', error);
+        console.warn('App initialization failed', error);
+        setAuthenticationStatus('unauthenticated');
+        router.replace('/(root)/(login)');
       }
-    }, 50);
+    };
+
+    initializeApp();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   //事件总线订阅
   useEffect(() => {
     eventBus.subscribe(eventBusKey.SendCmdEvent, (cmd: Command) => {
-      sendCmd(cmd);  //当收到发送命令事件时，调用sendCmd
+      sendCmd(cmd); //当收到发送命令事件时，调用sendCmd
     });
     //订阅Wifi事件，实时更新全局状态里的 WiFi 连接状态
     eventBus.subscribe(eventBusKey.WifiEvent, (data: { eConnect: boolean }) => {
@@ -116,7 +133,6 @@ export const Bootstrap = () => {
   //专门监听 GunErrorEvent（枪口异常）。一旦触发，会立即发送 lockUp（锁定）命令并弹出红色报错
   // 方案：使用依赖数组确保拿到最新的 rebootState
   useEffect(() => {
-
     const onGunError = () => {
       // 模式切换
       //sendCmdDispatch(Command.lockUp);
@@ -129,7 +145,7 @@ export const Bootstrap = () => {
         message: t('robot.gunErrorTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
     };
 
@@ -207,7 +223,7 @@ export const Bootstrap = () => {
       GlobalDialogManager.current?.show({
         title: t('wifi.connectDialogTips'),
         content: t('wifi.connectDialogTitle'),
-        callback: () => { },
+        callback: () => {},
       });
     }
   };
@@ -218,7 +234,7 @@ export const Bootstrap = () => {
         title: t('errors.robotDangerStatusTips'),
         type: 'error',
         duration: 3000,
-        onPress: () => { },
+        onPress: () => {},
       });
       setDebugLog({
         time: new Date().toISOString(),
@@ -244,7 +260,7 @@ export const Bootstrap = () => {
         title: t('errors.robotUnconnectedTips'),
         type: 'error',
         duration: 1500,
-        onPress: () => { },
+        onPress: () => {},
       });
       setDebugLog({
         time: new Date().toISOString(),
@@ -257,7 +273,7 @@ export const Bootstrap = () => {
     try {
       const getUserInfoFromStorage = await userInfo.getItem();
       if (!getUserInfoFromStorage || getUserInfoFromStorage === null) {
-        router.replace('/(login)');
+        router.replace('/(root)/(login)');
         return false;
       }
 
@@ -268,19 +284,24 @@ export const Bootstrap = () => {
         return false;
       }
 
-      if (getUserInfoFromStorage && getUserInfoFromStorage !== '') {
-        const parseJson = await JSON.parse(getUserInfoFromStorage || '{}');
-        if (
-          parseJson.id &&
-          parseJson.username === canLoginInfo.name &&
-          parseJson.password === canLoginInfo.password
-        ) {
-          console.log('登录成功');
-        }
+      const parseJson = JSON.parse(getUserInfoFromStorage);
+      const currentLoginInfo = useStore.getState().canLoginInfo;
+      const credentialsAreValid =
+        parseJson.id === currentLoginInfo.id &&
+        parseJson.username === currentLoginInfo.name &&
+        parseJson.password === currentLoginInfo.password;
+
+      if (!credentialsAreValid) {
+        await userInfo.removeItem();
+        router.replace('/(root)/(login)');
+        return false;
       }
+
+      console.log('登录成功');
       return true;
     } catch (error) {
       console.log(error);
+      router.replace('/(root)/(login)');
       return false;
     }
   };
@@ -322,6 +343,7 @@ export const Bootstrap = () => {
       }
 
       await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
+      setAuthenticationStatus('unauthenticated');
       router.replace('/(root)/(login)');
       showNotifier({
         title: t('errors.sessionExpired', {
@@ -352,6 +374,7 @@ export const Bootstrap = () => {
       }
 
       await Promise.all([userInfo.removeItem(), clearOnlineLoginAt()]);
+      setAuthenticationStatus('unauthenticated');
       router.dismissAll();
       router.replace('/(root)/(login)');
       showNotifier({

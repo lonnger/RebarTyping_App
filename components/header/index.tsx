@@ -53,7 +53,7 @@ export const Header = () => {
   const { top } = useSafeAreaInsets();
   const { scale } = useHomeLayoutScale();
   const scaled = (value: number) => scaleHomeValue(value, scale);
-  const { setRobotStatus, robotStatus } = useStore((state) => state);
+  const { setRobotStatus, robotStatus, authenticationStatus } = useStore((state) => state);
   const [wifiChooseListVisible, setWifiChooseListVisible] = useState(false);
   const [wifiList, setWifiList] = useState<WifiEntry[]>([]);
   const [wifiPassword, setWifiPassword] = useState('');
@@ -313,7 +313,11 @@ export const Header = () => {
   }, []);
 
   const showRobotWifiPrompt = () => {
-    if (isLoginPage || hasShownRobotWifiPromptRef.current) {
+    if (
+      isLoginPage ||
+      authenticationStatus !== 'authenticated' ||
+      hasShownRobotWifiPromptRef.current
+    ) {
       return;
     }
 
@@ -380,7 +384,7 @@ export const Header = () => {
     };
 
     // 只在非登录页面启动定期检查
-    if (!isLoginPage) {
+    if (!isLoginPage && authenticationStatus === 'authenticated') {
       // 立即检查一次
       checkWifiStatus();
 
@@ -393,7 +397,7 @@ export const Header = () => {
         clearInterval(wifiCheckInterval);
       }
     };
-  }, [isLoginPage, robotStatus.currentConnectWifiSSID, wifiConnecting]);
+  }, [authenticationStatus, isLoginPage, robotStatus.currentConnectWifiSSID, wifiConnecting]);
 
   // 处理WiFi断联的统一逻辑
   const handleWifiDisconnected = (reason: string) => {
