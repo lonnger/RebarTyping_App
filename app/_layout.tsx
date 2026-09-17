@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Text, TextInput } from 'react-native';
+import { Platform, Text, TextInput } from 'react-native';
 import { DefaultTheme, PaperProvider, TextInput as PaperTextInput } from 'react-native-paper';
 
 import GlobalActivityIndicatorComponent from '@/components/activity-indicator-global';
@@ -26,9 +26,11 @@ const disableFontScaling = (component: FontScalingDefaults) => {
   };
 };
 
-disableFontScaling(Text as unknown as FontScalingDefaults);
-disableFontScaling(TextInput as unknown as FontScalingDefaults);
-disableFontScaling(PaperTextInput as unknown as FontScalingDefaults);
+if (Platform.OS !== 'android') {
+  disableFontScaling(Text as unknown as FontScalingDefaults);
+  disableFontScaling(TextInput as unknown as FontScalingDefaults);
+  disableFontScaling(PaperTextInput as unknown as FontScalingDefaults);
+}
 
 const theme = {
   ...DefaultTheme,

@@ -21,11 +21,22 @@ const LEGACY_ATTACH_BASE_CONTEXT = `  override fun attachBaseContext(newBase: Co
 `;
 const FIXED_CONFIGURATION_METHODS = `  private fun createFixedConfiguration(source: Configuration): Configuration =
     Configuration(source).apply {
-      fontScale = 1.0f
+      fontScale = getFixedFontScale(source)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
         densityDpi = (DisplayMetrics.DENSITY_DEVICE_STABLE * 0.9f).toInt()
       }
     }
+
+  private fun getFixedFontScale(source: Configuration): Float {
+    val sourceDensityDpi = source.densityDpi.takeIf { it > 0 }
+      ?: DisplayMetrics.DENSITY_DEVICE_STABLE
+    val widthPixels = source.screenWidthDp * sourceDensityDpi / DisplayMetrics.DENSITY_DEFAULT
+    val heightPixels = source.screenHeightDp * sourceDensityDpi / DisplayMetrics.DENSITY_DEFAULT
+    val longEdgePixels = maxOf(widthPixels, heightPixels)
+    val shortEdgePixels = minOf(widthPixels, heightPixels)
+
+    return if (longEdgePixels >= 2000 && shortEdgePixels >= 1200) 0.82f else 1.0f
+  }
 
   @Suppress("DEPRECATION")
   private fun applyFixedConfiguration(source: Configuration): Configuration {

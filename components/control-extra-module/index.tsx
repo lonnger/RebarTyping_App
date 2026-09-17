@@ -25,8 +25,10 @@ export const ControlExtraModule = () => {
     HOME_LAYOUT.right.extraButtonContentPaddingHorizontal,
     scale
   );
-  const machineDownButtonFontSize = i18n.language.startsWith('en')
-    ? Math.max(8, scaleHomeValue(HOME_LAYOUT.right.machineDownButtonFontSize, scale))
+  const isEnglishManualMode =
+    i18n.language.startsWith('en') && robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL;
+  const manualButtonFontSize = isEnglishManualMode
+    ? Math.max(10, scaleHomeValue(HOME_LAYOUT.right.manualEnglishButtonFontSize, scale))
     : extraButtonsFontSize;
   const isInLockedMode = () => {
     if (robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED) {
@@ -134,7 +136,9 @@ export const ControlExtraModule = () => {
       <View
         className="flex flex-row"
         style={{
-          width: HOME_LAYOUT.right.extraButtonsRowWidth,
+          width: isEnglishManualMode
+            ? HOME_LAYOUT.right.manualEnglishButtonsRowWidth
+            : HOME_LAYOUT.right.extraButtonsRowWidth,
           rowGap: extraButtonsGap,
           columnGap: extraButtonsGap,
           flexWrap: 'nowrap',
@@ -147,7 +151,7 @@ export const ControlExtraModule = () => {
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: extraButtonsFontSize }}
+            labelStyle={{ fontSize: manualButtonFontSize }}
             onPress={robotReboot}>
             {t('common.tyingRobotRestart')}
           </Button>
@@ -183,7 +187,7 @@ export const ControlExtraModule = () => {
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: machineDownButtonFontSize }}
+            labelStyle={{ fontSize: manualButtonFontSize }}
             onPress={robotDown}>
             {t('common.machineDown')}
           </Button>

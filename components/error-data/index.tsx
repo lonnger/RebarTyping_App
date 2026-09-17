@@ -43,21 +43,30 @@ export const ErrorData = () => {
         </View>
         <DataTable>
           <DataTable.Header>
-            <DataTable.Title>{t('malfunction.index')}</DataTable.Title>
-            <DataTable.Title>{t('malfunction.time')}</DataTable.Title>
-            <DataTable.Title numeric>{t('malfunction.name')}</DataTable.Title>
+            <DataTable.Title style={{ flex: 0.45 }}>{t('malfunction.index')}</DataTable.Title>
+            <DataTable.Title style={{ flex: 1.2 }}>{t('malfunction.time')}</DataTable.Title>
+            <DataTable.Title style={{ flex: 1.55 }} numeric>
+              {t('malfunction.name')}
+            </DataTable.Title>
           </DataTable.Header>
 
           {items.length > 0 ? (
             items.slice(0, 3).map((item) => (
               <DataTable.Row key={item.key}>
-                <DataTable.Cell textStyle={{ textAlign: 'center', fontSize: 12 }}>
+                <DataTable.Cell
+                  style={{ flex: 0.45 }}
+                  textStyle={{ textAlign: 'center', fontSize: 12 }}>
                   {item.index}
                 </DataTable.Cell>
-                <DataTable.Cell textStyle={{ textAlign: 'center', fontSize: 12 }}>
+                <DataTable.Cell
+                  style={{ flex: 1.2 }}
+                  textStyle={{ textAlign: 'center', fontSize: 12 }}>
                   {item.time}
                 </DataTable.Cell>
-                <DataTable.Cell textStyle={{ textAlign: 'center', fontSize: 12 }} numeric>
+                <DataTable.Cell
+                  style={{ flex: 1.55 }}
+                  textStyle={{ textAlign: 'center', fontSize: 12 }}
+                  numeric>
                   {item.name}
                 </DataTable.Cell>
               </DataTable.Row>

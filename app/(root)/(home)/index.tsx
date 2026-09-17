@@ -1,4 +1,5 @@
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ControlBar } from '@/components/control-bar';
 import { DangerousStatus } from '@/components/dangerous-status';
@@ -16,6 +17,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 
 const Home = () => {
   const { robotStatus } = useStore((state) => state);
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const { width, height, scale, isCompact } = useHomeLayoutScale();
   const { page, header, left, center, right } = HOME_LAYOUT;
   const scaled = (value: number) => scaleHomeValue(value, scale);
@@ -106,6 +108,7 @@ const Home = () => {
         showsHorizontalScrollIndicator={width < scaledMinWidth}>
         <ScrollView
           style={{ flex: 1, width: layoutWidth }}
+          contentContainerStyle={{ paddingBottom: bottomInset }}
           bounces={false}
           nestedScrollEnabled
           showsVerticalScrollIndicator>
