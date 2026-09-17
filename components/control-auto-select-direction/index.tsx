@@ -30,7 +30,8 @@ export const ControlAutoSelectDirection = ({
   const { scale } = useHomeLayoutScale();
   const scaled = (value: number) => scaleHomeValue(value, scale);
   const fullBindingDirectionOffsetY =
-    robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING
+    robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING ||
+    robotStatus.currentBindingMode === ROBOT_WORK_MODE.WITHOUT_BINDING
       ? scaled(automaticDirection.fullBindingDirectionOffsetY)
       : 0;
 

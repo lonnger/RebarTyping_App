@@ -1,5 +1,6 @@
 import { useAsyncStorage } from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { router, useSegments } from 'expo-router';
 import {
   BatteryEmpty,
@@ -618,7 +619,32 @@ export const Header = () => {
   // 打开WiFi设置
   const openWifiSetting = async () => {
     try {
-      // 检查WiFi权限
+      if (Platform.OS === 'android') {
+        setWifiChooseListVisible(false);
+
+        const hasPermission = await getWifiPermission();
+        if (!hasPermission) {
+          showNotifier({
+            title: t('wifi.ssidPermissionRequired'),
+            type: 'warning',
+            duration: 6000,
+            onPress: () => {},
+          });
+        }
+
+        try {
+          await IntentLauncher.startActivityAsync('android.settings.panel.action.WIFI');
+        } catch (error) {
+          console.warn('Unable to open WiFi panel, falling back to WiFi settings', error);
+          await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.WIFI_SETTINGS);
+        }
+
+        if (hasPermission) {
+          await fetchCurrentConnectWifiSSID();
+        }
+        return;
+      }
+
       const hasPermission = await getWifiPermission();
       if (!hasPermission) {
         showNotifier({
@@ -801,15 +827,6 @@ export const Header = () => {
           }
           return [];
         });
-
-        if (type === 'manual') {
-          showNotifier({
-            title: t('wifi.noWifiList'),
-            type: 'error',
-            duration: 3000,
-            onPress: () => {},
-          });
-        }
       }
     } catch (error) {
       console.error(t('wifi.wifiGetFailed'), error);

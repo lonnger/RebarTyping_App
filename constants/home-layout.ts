@@ -142,11 +142,15 @@ export const HOME_LAYOUT = {
     // 普通模式操作卡片高度的最小值和最大值。
     minHeight: 500,
     maxHeight: 680,
-    // 自动满扎模式高度 = 普通高度 + fullBindingExtraHeight。
+    // 手动模式在普通高度基础上增加的高度。
+    manualExtraHeight: 30,
+    // 手动模式扩大后的高度不会超过该值。
+    manualMaxHeight: 710,
+    // 自动满扎和不扎模式高度 = 普通高度 + fullBindingExtraHeight。
     fullBindingExtraHeight: 10,
-    // 自动满扎模式扩大后的高度不会超过该值。
+    // 自动满扎和不扎模式扩大后的高度不会超过该值。
     fullBindingMaxHeight: 510,
-    // 约 960×600dp 小平板上，满扎卡片使用的紧凑模式最小设计高度（仍会乘全局 scale）。
+    // 约 960×600dp 小平板上，满扎和不扎卡片使用的紧凑模式最小设计高度（仍会乘全局 scale）。
     compactFullBindingMinHeight: 570,
     // 自动跳扎模式高度 = 普通高度 + skipBindingExtraHeight。
     skipBindingExtraHeight: 60,
@@ -157,6 +161,8 @@ export const HOME_LAYOUT = {
     // 右侧操作卡片整体位移，X 正数向右，Y 正数向下。
     offsetX: 0,
     offsetY: -30,
+    // 跳扎模式下，Robot Controls 整体额外向上移动的距离。
+    skipBindingOffsetY: -30,
 
     // 操作卡片内部内容的左右、顶部和底部留白。
     contentPaddingHorizontal: 22,
@@ -186,7 +192,7 @@ export const HOME_LAYOUT = {
 
     // 自动模式：开始/停止按钮、四个方向键和中心方向图片。
     automaticDirection: {
-      // 仅满扎模式生效：四个方向键和中央图片整体向下移动的距离。
+      // 满扎和不扎模式生效：四个方向键和中央图片整体向下移动的距离。
       fullBindingDirectionOffsetY: 6,
       // 自动方向控制整体距离上方模式选择器的距离；增大即整体向下。
       containerMarginTop: 74,
@@ -216,7 +222,7 @@ export const HOME_LAYOUT = {
       // 开始/停止按钮文字大小。
       startStopFontSize: 16,
       // 跳扎数量选择区域与方向控制区域之间的距离。
-      skipBindingMarginTop: 80,
+      skipBindingMarginTop: 100,
     },
 
     // 手动模式：四个方向键和中心方向图片。
@@ -246,6 +252,8 @@ export const HOME_LAYOUT = {
     extraButtonsRowWidth: '92%' as const,
     // 底部功能按钮文字大小；小屏会随全局比例缩小，但最低保持 10。
     extraButtonsFontSize: 11,
+    // 手动模式“机器下降”英文较长，使用稍小字号保证完整显示。
+    machineDownButtonFontSize: 9,
     // 功能按钮内容的左右内边距；设小一些可保证 8 英寸平板上两个按钮并排。
     extraButtonContentPaddingHorizontal: 0,
   },

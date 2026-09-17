@@ -48,9 +48,11 @@ const Home = () => {
   const isSkipBindingMode =
     robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO &&
     robotStatus.currentBindingMode === ROBOT_WORK_MODE.SKIP_BINDING;
-  const isFullBindingMode =
+  const isManualMode = robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL;
+  const usesFullBindingLayout =
     robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO &&
-    robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING;
+    (robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING ||
+      robotStatus.currentBindingMode === ROBOT_WORK_MODE.WITHOUT_BINDING);
   const skipBindingPanelHeight = Math.min(
     normalRightPanelHeight + scaled(right.skipBindingExtraHeight),
     scaled(right.skipBindingMaxHeight)
@@ -59,11 +61,17 @@ const Home = () => {
     normalRightPanelHeight + scaled(right.fullBindingExtraHeight),
     scaled(right.fullBindingMaxHeight)
   );
+  const manualPanelHeight = Math.min(
+    normalRightPanelHeight + scaled(right.manualExtraHeight),
+    scaled(right.manualMaxHeight)
+  );
   const rightPanelHeight = isSkipBindingMode
     ? Math.max(skipBindingPanelHeight, isCompact ? scaled(right.compactSkipBindingMinHeight) : 0)
-    : isFullBindingMode
+    : usesFullBindingLayout
       ? Math.max(fullBindingPanelHeight, isCompact ? scaled(right.compactFullBindingMinHeight) : 0)
-      : normalRightPanelHeight;
+      : isManualMode
+        ? manualPanelHeight
+        : normalRightPanelHeight;
   const centerImageSize = Math.floor(
     Math.max(
       scaled(center.image.minSize),
@@ -81,7 +89,7 @@ const Home = () => {
     normalRightPanelHeight,
     estimatedCenterHeight
   );
-  // 右侧卡片保持普通模式时的顶部位置，只在满扎/跳扎时向下扩展。
+  // 右侧卡片保持普通模式时的顶部位置，在满扎、不扎或跳扎时向下扩展。
   const normalRightTopOffset = Math.max(0, (baseContentHeight - normalRightPanelHeight) / 2);
   const rightColumnHeight = normalRightTopOffset + rightPanelHeight;
   const bodyHeight = Math.max(baseContentHeight, rightColumnHeight) + verticalPadding * 2;
@@ -164,7 +172,11 @@ const Home = () => {
                     height: rightPanelHeight,
                     transform: [
                       { translateX: scaled(right.offsetX) },
-                      { translateY: scaled(right.offsetY) },
+                      {
+                        translateY: scaled(
+                          right.offsetY + (isSkipBindingMode ? right.skipBindingOffsetY : 0)
+                        ),
+                      },
                     ],
                   }}>
                   <ControlBar />

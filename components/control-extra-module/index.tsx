@@ -14,7 +14,7 @@ import { SocketManage } from '@/utils/socketManage';
 
 export const ControlExtraModule = () => {
   const { robotStatus, workParams, setWorkParams } = useStore((state) => state);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { scale } = useHomeLayoutScale();
   const extraButtonsGap = scaleHomeValue(HOME_LAYOUT.right.extraButtonsGap, scale);
   const extraButtonsFontSize = Math.max(
@@ -25,6 +25,9 @@ export const ControlExtraModule = () => {
     HOME_LAYOUT.right.extraButtonContentPaddingHorizontal,
     scale
   );
+  const machineDownButtonFontSize = i18n.language.startsWith('en')
+    ? Math.max(8, scaleHomeValue(HOME_LAYOUT.right.machineDownButtonFontSize, scale))
+    : extraButtonsFontSize;
   const isInLockedMode = () => {
     if (robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED) {
       showNotifier({
@@ -180,7 +183,7 @@ export const ControlExtraModule = () => {
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: extraButtonsFontSize }}
+            labelStyle={{ fontSize: machineDownButtonFontSize }}
             onPress={robotDown}>
             {t('common.machineDown')}
           </Button>
