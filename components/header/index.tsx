@@ -71,6 +71,7 @@ export const Header = () => {
   const [savedWifiPasswords, setSavedWifiPasswords] = useState<{ [ssid: string]: string }>({});
   const [wifiConnecting, setWifiConnecting] = useState(false);
   const [espSystemPasswordDialogVisible, setEspSystemPasswordDialogVisible] = useState(false);
+  const [systemWifiReminderVisible, setSystemWifiReminderVisible] = useState(false);
   const wifiPasswordsStorage = useAsyncStorage(WIFI_PASSWORDS_STORAGE_KEY);
   const [currentWifiSSID, setCurrentWifiSSID] = useState<string | null>(null);
   const hasShownRobotWifiPromptRef = useRef(false);
@@ -619,32 +620,6 @@ export const Header = () => {
   // 打开WiFi设置
   const openWifiSetting = async () => {
     try {
-      if (Platform.OS === 'android') {
-        setWifiChooseListVisible(false);
-
-        const hasPermission = await getWifiPermission();
-        if (!hasPermission) {
-          showNotifier({
-            title: t('wifi.ssidPermissionRequired'),
-            type: 'warning',
-            duration: 6000,
-            onPress: () => {},
-          });
-        }
-
-        try {
-          await IntentLauncher.startActivityAsync('android.settings.panel.action.WIFI');
-        } catch (error) {
-          console.warn('Unable to open WiFi panel, falling back to WiFi settings', error);
-          await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.WIFI_SETTINGS);
-        }
-
-        if (hasPermission) {
-          await fetchCurrentConnectWifiSSID();
-        }
-        return;
-      }
-
       const hasPermission = await getWifiPermission();
       if (!hasPermission) {
         showNotifier({
@@ -672,6 +647,29 @@ export const Header = () => {
         duration: 3000,
         onPress: () => {},
       });
+    }
+  };
+
+  const openSystemWifiSettings = async () => {
+    setSystemWifiReminderVisible(false);
+    setWifiChooseListVisible(false);
+
+    try {
+      await IntentLauncher.startActivityAsync('android.settings.panel.action.WIFI');
+    } catch (panelError) {
+      console.warn('Unable to open WiFi panel, falling back to WiFi settings', panelError);
+
+      try {
+        await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.WIFI_SETTINGS);
+      } catch (settingsError) {
+        console.error('Unable to open system WiFi settings', settingsError);
+        showNotifier({
+          title: t('wifi.openWifiSettingFailed'),
+          type: 'error',
+          duration: 3000,
+          onPress: () => {},
+        });
+      }
     }
   };
 
@@ -1125,7 +1123,7 @@ export const Header = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            width: width / 3,
+            width: width * 0.4,
           }}>
           <View className="w-full">
             <View className="mb-5 flex flex-row items-center justify-between">
@@ -1179,8 +1177,36 @@ export const Header = () => {
                 </View>
               )}
             />
+            {Platform.OS === 'android' ? (
+              <Button
+                compact
+                icon="cog"
+                mode="outlined"
+                textColor="#6B7280"
+                style={{ marginTop: 6, borderColor: '#D1D5DB' }}
+                labelStyle={{ fontSize: 12 }}
+                onPress={() => setSystemWifiReminderVisible(true)}>
+                {t('wifi.openSystemWifiSettings')}
+              </Button>
+            ) : null}
           </View>
         </Modal>
+
+        <Dialog
+          visible={systemWifiReminderVisible}
+          style={{ width: '70%', alignSelf: 'center' }}
+          onDismiss={() => setSystemWifiReminderVisible(false)}>
+          <Dialog.Title>{t('wifi.systemWifiReminderTitle')}</Dialog.Title>
+          <Dialog.Content>
+            <Text>{t('wifi.systemWifiReminderMessage')}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setSystemWifiReminderVisible(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onPress={openSystemWifiSettings}>{t('common.confirm')}</Button>
+          </Dialog.Actions>
+        </Dialog>
 
         {/* 使用已保存密码的确认对话框 */}
         <Dialog
