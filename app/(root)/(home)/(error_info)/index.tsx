@@ -12,12 +12,10 @@ import { ConnectDeviceInfo } from '@/utils/connectDeviceInfo';
 export default function Error() {
   const { height } = Dimensions.get('window');
   const [numberOfItemsPerPageList] = useState([height > 700 ? 10 : 3]);
-  const [items, setItems] = useState<{ key: number; index: string; time: string; name: string }[]>(
-    []
-  );
+  const [items, setItems] = useState<{ key: number; index: string; name: string }[]>([]);
   const [itemsPerPage] = useState(numberOfItemsPerPageList[0]);
   const [currentPage, setCurrentPage] = useState(0);
-  const { errorGroup } = useStore((state) => state);
+  const { errorHistory, clearErrorHistory } = useStore((state) => state);
   const { t } = useTranslation();
 
   const goback = () => {
@@ -25,11 +23,10 @@ export default function Error() {
   };
 
   useEffect(() => {
-    const temp = errorGroup?.map((item, index) => {
+    const temp = errorHistory.map((item, index) => {
       return {
         key: index,
-        index: item.errorId.toString(),
-        time: item.time,
+        index: (index + 1).toString(),
         name: ConnectDeviceInfo.getErrorInfo(item.errorId),
       };
     });
@@ -38,7 +35,7 @@ export default function Error() {
     if (currentPage > 0 && temp && temp.length <= currentPage * itemsPerPage) {
       setCurrentPage(0);
     }
-  }, [errorGroup, currentPage, itemsPerPage]);
+  }, [errorHistory, currentPage, itemsPerPage]);
 
   const paginatedItems = useMemo(() => {
     const startIndex = currentPage * itemsPerPage;
@@ -92,7 +89,6 @@ export default function Error() {
               <DataTable>
                 <DataTable.Header>
                   <DataTable.Title>{t('malfunction.index')}</DataTable.Title>
-                  <DataTable.Title>{t('malfunction.time')}</DataTable.Title>
                   <DataTable.Title numeric>{t('malfunction.name')}</DataTable.Title>
                 </DataTable.Header>
 
@@ -100,9 +96,6 @@ export default function Error() {
                   <DataTable.Row key={item.key}>
                     <DataTable.Cell textStyle={{ textAlign: 'center', fontSize: 12 }}>
                       {item.index}
-                    </DataTable.Cell>
-                    <DataTable.Cell textStyle={{ textAlign: 'center', fontSize: 12 }}>
-                      {item.time}
                     </DataTable.Cell>
                     <DataTable.Cell textStyle={{ textAlign: 'center', fontSize: 12 }} numeric>
                       {item.name}
@@ -146,6 +139,14 @@ export default function Error() {
             </View>
 
             <View className="mt-5 flex flex-row items-center justify-end gap-10">
+              <Button
+                mode="outlined"
+                icon="delete-outline"
+                textColor="#C62828"
+                disabled={items.length === 0}
+                onPress={clearErrorHistory}>
+                <Text>{t('malfunction.clearRecords')}</Text>
+              </Button>
               <Button mode="outlined" icon="arrow-left" className="px-3" onPress={goback}>
                 <Text>{t('common.back')}</Text>
               </Button>

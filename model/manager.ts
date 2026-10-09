@@ -53,7 +53,7 @@ class MyDatabaase {
         `CREATE TABLE IF NOT EXISTS user(id INTEGER PRIMARY KEY NOT NULL,name TEXT NOT NULL,password TEXT NOT NULL,company TEXT,position TEXT,number TEXT)`
       );
       await this.db.execAsync(
-        'INSERT OR REPLACE INTO user VALUES(0,"Castor","hlzz","HKCRC","HongKong","85223563130")'
+        'INSERT OR REPLACE INTO user VALUES(0,"Castor","hlzz","Castor Construction Robotics Limited","Room 202, Building L, Phase 2, North Zone, Qianhaimenggongchang, Nanshan District, Shenzhen","(852) 63688570  (86) 17602928471")'
       );
     }
   }

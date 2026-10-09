@@ -1,0 +1,7 @@
+Version 3: clean black backdrop, moving perspective rebar grid, subtle machine motion.
+
+Robot extraction: built-in image_gen tool, original supplied PNG used as edit target.
+Final generation prompt:
+Use case: background-extraction. Edit target: attached industrial robot render. Create a precise isolated cutout of ONLY the complete robot assembly on genuinely transparent background. Preserve the robot's exact frontal appearance, proportions, white/silver cabinet, green lamp, logo 河狸, beige horizontal cylindrical bar projecting to both sides, white front horizontal carriage crossbeam and rear white support rails. Remove ALL ground steel reinforcing mesh, all irregular white background patches, and all black background. Preserve narrow vertical tool pin below the cabinet. No new objects or shadows outside the assembly. Clean anti-aliased edges, opaque robot, transparent spaces between the carriage rails, full assembly fits within canvas. Match source composition and size if possible. Output one transparent PNG, not a checkerboard simulation.
+
+Animation: tools/make_forward_clean.cjs. Procedurally rendered steel mesh with perspective projection; generated robot cutout composited on top. 960 x 600 WebP and 720 x 450 GIF, 120 frames at 20 fps, looping. Mesh material and robot cutout can differ slightly from the supplied render.

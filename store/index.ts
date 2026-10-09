@@ -18,6 +18,7 @@ interface State {
   robotStatus: {
     robotDangerStatus: boolean;
     robotLockedStatus: boolean;
+    movementDirection: 'idle' | 'forward' | 'backward';
     direction: Map<DIRECTION, boolean>;
     currentMode: ROBOT_CURRENT_MODE;
     currentBindingMode: ROBOT_WORK_MODE | '';
@@ -51,17 +52,23 @@ interface State {
     inputNodeMax: number;
   };
   data_inspect: {
+    identified_node_count: number;
+    lashed_count: number;
     overage_num: number;
     node_laser_num: number;
     track_laser_num: number;
   };
   setWorkParams: (newInfo: Partial<State['workParams']>) => void;
   errorGroup: {
-    time: string;
+    errorId: number;
+  }[];
+  errorHistory: {
     errorId: number;
   }[];
   setDataInspect: (newInfo: Partial<State['data_inspect']>) => void;
-  setErrorGroup: (newInfo: { time: string; errorId: number }) => void;
+  setErrorGroup: (newInfo: { errorId: number }) => void;
+  removeErrorGroup: (errorId: number) => void;
+  clearErrorHistory: () => void;
   debugLog: {
     time: string;
     msg: string;
@@ -86,7 +93,7 @@ export const initWorkParams = {
   lower_steel_bar_length: '22', // 下层钢筋长度初始值
   binding_timeout: '20', // 绑扎超时时间初始值
   ultrasonic_waves: true, // 超声波初始值
-  prevent_falling_laser: true, // 防坠落激光初始值
+  prevent_falling_laser: false, // 防坠落激光默认关闭
   auto_find_point: false, // 自动寻点开关初始值
   inputOrbitMax: workParamsRange.orbitMax, // 变轨激光最大值
   inputNodeMax: workParamsRange.nodeMax, // 节点激光最大值
@@ -99,6 +106,7 @@ export const useStore = create<State>((set) => ({
     electric: 100, // 电量
     robotDangerStatus: false, // 软急停状态
     robotLockedStatus: false, // 锁止状态
+    movementDirection: 'idle', // 操作界面运动动画状态
     direction: new Map([
       // 前进方向
       [DIRECTION.UP, false],
@@ -118,6 +126,8 @@ export const useStore = create<State>((set) => ({
     currentConnectWifiPassword: '', // WiFi连接密码
   },
   data_inspect: {
+    identified_node_count: 0, // 已识别节点数量
+    lashed_count: 0, // 已完成绑扎数量
     overage_num: 0, // 卷丝余量
     node_laser_num: 0, // 节点激光初始值
     track_laser_num: 0, // 变轨激光初始值
@@ -126,12 +136,13 @@ export const useStore = create<State>((set) => ({
     set((state) => ({ data_inspect: { ...state.data_inspect, ...newInfo } })),
   // 一个写死的登录信息
   canLoginInfo: {
-    company: 'HKCRC',
+    company: 'Castor Construction Robotics Limited',
     id: 0,
     name: 'Castor',
-    number: '85223563130',
+    number: '(852) 63688570  (86) 17602928471',
     password: 'hlzz',
-    position: 'HongKong',
+    position:
+      'Room 202, Building L, Phase 2, North Zone, Qianhaimenggongchang, Nanshan District, Shenzhen',
   },
   setCanLoginInfo: (newInfo: { [key: string]: any }) =>
     set((state) => ({ canLoginInfo: { ...state.canLoginInfo, ...newInfo } })),
@@ -156,7 +167,7 @@ export const useStore = create<State>((set) => ({
     lower_steel_bar_length: '22', // 下层钢筋长度初始值
     binding_timeout: '20', // 绑扎超时时间初始值
     ultrasonic_waves: true, // 超声波初始值
-    prevent_falling_laser: true, // 防坠落激光初始值
+    prevent_falling_laser: false, // 防坠落激光默认关闭
     auto_find_point: false, // 自动寻点开关初始值
     inputOrbitMax: workParamsRange.orbitMax, // 变轨激光最大值
     inputNodeMax: workParamsRange.nodeMax, // 节点激光最大值
@@ -169,10 +180,23 @@ export const useStore = create<State>((set) => ({
       },
     })),
   errorGroup: [],
-  setErrorGroup: (newInfo: { time: string; errorId: number }) =>
+  errorHistory: [],
+  setErrorGroup: (newInfo: { errorId: number }) =>
+    set((state) => {
+      if (state.errorGroup.some((item) => item.errorId === newInfo.errorId)) {
+        return state;
+      }
+
+      return {
+        errorGroup: [newInfo, ...state.errorGroup],
+        errorHistory: [newInfo, ...state.errorHistory],
+      };
+    }),
+  removeErrorGroup: (errorId: number) =>
     set((state) => ({
-      errorGroup: [newInfo, ...state.errorGroup],
+      errorGroup: state.errorGroup.filter((item) => item.errorId !== errorId),
     })),
+  clearErrorHistory: () => set({ errorHistory: [] }),
   debugLog: [],
   setDebugLog: (newInfo: { time: string; msg: string }) =>
     set((state) => {

@@ -49,6 +49,7 @@ import {
 
 // Wi-Fi 密码存储键
 const WIFI_PASSWORDS_STORAGE_KEY = 'wifi_passwords';
+const MIN_MANUAL_WIFI_REFRESH_DISPLAY_MS = 1200;
 
 export const Header = () => {
   const { top } = useSafeAreaInsets();
@@ -79,7 +80,7 @@ export const Header = () => {
   const lastSuccessfulWifiListRef = useRef<WifiEntry[]>([]);
   const rssiPollingErrorLoggedRef = useRef(false);
 
-  const { width } = Dimensions.get('screen');
+  const { width, height } = Dimensions.get('screen');
   // 当前选择的WiFi SSID, 用于连接WiFi中间临时存储
   const currentSelectedWifi = useRef<string>('');
   const isRobotWifiSSID = (ssid: string) =>
@@ -165,6 +166,22 @@ export const Header = () => {
 
   const isWifiRadioEnabled = async () => {
     return Platform.OS !== 'android' || (await WifiManager.isEnabled());
+  };
+
+  const getConnectedRobotSSID = async (): Promise<string> => {
+    try {
+      const systemSSID = normalizeWifiSSID((await WifiManager.getCurrentWifiSSID()) || '');
+      if (isRobotWifiSSID(systemSSID)) {
+        return systemSSID;
+      }
+
+      const connectedEspInfo = await getConnectedEspWifiInfo();
+      const nativeSSID = normalizeWifiSSID(connectedEspInfo?.ssid || '');
+      return isRobotWifiSSID(nativeSSID) ? nativeSSID : '';
+    } catch (error) {
+      console.warn('[ROBOT_WIFI_SCAN] unable to read the connected SSID', error);
+      return '';
+    }
   };
 
   // 清除过期缓存
@@ -750,9 +767,16 @@ export const Header = () => {
       return;
     }
     wifiRefreshInFlightRef.current = true;
+    const refreshStartedAt = Date.now();
+    const previouslyDisplayedWifiList = wifiList;
+    const previousWifiTimestamps = new Map(
+      wifiList.map((wifi) => [wifi.BSSID, wifi.timestamp] as const)
+    );
 
     if (type === 'manual') {
-      GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 1500);
+      GlobalActivityIndicatorManager.current?.show(t('wifi.refreshingWifiList'), 0);
+      lastSuccessfulWifiListRef.current = [];
+      setWifiCache(null);
     }
 
     let loadWifiList: WifiEntry[] = [];
@@ -760,6 +784,24 @@ export const Header = () => {
       if (!(await isWifiRadioEnabled())) {
         clearWifiScanResults();
         return;
+      }
+      const connectedRobotSSID = await getConnectedRobotSSID();
+      let connectedWifiEntry: WifiEntry | null = null;
+
+      if (isRobotWifiSSID(connectedRobotSSID)) {
+        connectedWifiEntry = previouslyDisplayedWifiList.find(
+          (wifi) => normalizeWifiSSID(wifi.SSID) === connectedRobotSSID
+        ) || {
+          SSID: connectedRobotSSID,
+          BSSID: `connected:${connectedRobotSSID}`,
+          capabilities: '',
+          frequency: 0,
+          level: Number.NaN,
+          timestamp: Date.now(),
+        };
+        setWifiList([connectedWifiEntry]);
+        setCurrentWifiSSID(connectedRobotSSID);
+        setRobotStatus({ currentConnectWifiSSID: connectedRobotSSID });
       }
 
       if (type === 'auto') {
@@ -778,63 +820,55 @@ export const Header = () => {
       } else {
         try {
           const forcedScanResult = await WifiManager.reScanAndLoadWifiList();
-          if (Array.isArray(forcedScanResult) && forcedScanResult.length > 0) {
-            loadWifiList = forcedScanResult;
-            updateWifiCache(loadWifiList, 'force');
-          } else {
-            console.log('[ROBOT_WIFI_SCAN] forced scan unavailable; using cached results');
-            const cachedData = getCachedWifiData(true);
-            if (cachedData && cachedData.length > 0) {
-              loadWifiList = cachedData;
-            } else {
-              const systemWifiList = await WifiManager.loadWifiList();
-              if (Array.isArray(systemWifiList)) {
-                loadWifiList = systemWifiList;
+          if (Array.isArray(forcedScanResult)) {
+            loadWifiList = forcedScanResult.filter((wifi) => {
+              if (!isRobotWifiSSID(wifi.SSID)) {
+                return true;
               }
-              if (loadWifiList.length > 0) {
-                updateWifiCache(loadWifiList, 'system');
+
+              if (normalizeWifiSSID(wifi.SSID) === connectedRobotSSID) {
+                return true;
               }
+
+              const previousTimestamp = previousWifiTimestamps.get(wifi.BSSID);
+              return previousTimestamp === undefined || wifi.timestamp > previousTimestamp;
+            });
+            if (loadWifiList.length > 0) {
+              updateWifiCache(loadWifiList, 'force');
             }
+          } else {
+            console.log('[ROBOT_WIFI_SCAN] forced scan returned no fresh results');
           }
         } catch (error) {
-          console.log('[ROBOT_WIFI_SCAN] forced scan failed; using cached results', error);
-          const cachedData = getCachedWifiData(true);
-          if (cachedData && cachedData.length > 0) {
-            loadWifiList = cachedData;
-          } else {
-            const systemWifiList = await WifiManager.loadWifiList();
-            if (Array.isArray(systemWifiList)) {
-              loadWifiList = systemWifiList;
-            }
-            if (loadWifiList.length > 0) {
-              updateWifiCache(loadWifiList, 'system');
-            }
+          console.log('[ROBOT_WIFI_SCAN] forced scan failed', error);
+          if (!isRobotWifiSSID(connectedRobotSSID)) {
+            throw error;
           }
+        }
+      }
+
+      if (isRobotWifiSSID(connectedRobotSSID)) {
+        connectedWifiEntry =
+          loadWifiList.find((wifi) => normalizeWifiSSID(wifi.SSID) === connectedRobotSSID) ||
+          connectedWifiEntry;
+
+        if (connectedWifiEntry) {
+          loadWifiList = [
+            connectedWifiEntry,
+            ...loadWifiList.filter((wifi) => normalizeWifiSSID(wifi.SSID) !== connectedRobotSSID),
+          ];
         }
       }
 
       const filteredWifiList = getRobotWifiList(loadWifiList);
-      if (filteredWifiList.length > 0) {
-        lastSuccessfulWifiListRef.current = filteredWifiList;
-        setWifiList(filteredWifiList);
-      } else {
-        setWifiList((prevList) => {
-          if (prevList && prevList.length > 0) {
-            console.log('新获取的列表为空，保留当前显示的WiFi列表');
-            return prevList;
-          }
-          return [];
-        });
+      lastSuccessfulWifiListRef.current = filteredWifiList;
+      setWifiList(filteredWifiList);
+      if (filteredWifiList.length === 0) {
+        setWifiCache(null);
       }
     } catch (error) {
       console.error(t('wifi.wifiGetFailed'), error);
-
-      setWifiList((prevList) => {
-        if (prevList && prevList.length > 0) {
-          return prevList;
-        }
-        return [];
-      });
+      clearWifiScanResults();
 
       if (type === 'manual') {
         showNotifier({
@@ -845,6 +879,16 @@ export const Header = () => {
         });
       }
     } finally {
+      if (type === 'manual') {
+        const remainingDisplayTime = Math.max(
+          0,
+          MIN_MANUAL_WIFI_REFRESH_DISPLAY_MS - (Date.now() - refreshStartedAt)
+        );
+        if (remainingDisplayTime > 0) {
+          await delayed(remainingDisplayTime);
+        }
+        GlobalActivityIndicatorManager.current?.hide();
+      }
       wifiRefreshInFlightRef.current = false;
     }
   };
@@ -1124,6 +1168,7 @@ export const Header = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             width: width * 0.4,
+            maxHeight: height * 0.82,
           }}>
           <View className="w-full">
             <View className="mb-5 flex flex-row items-center justify-between">
@@ -1138,15 +1183,24 @@ export const Header = () => {
             </View>
 
             <FlatList
+              style={{ maxHeight: height * 0.5 }}
+              contentContainerStyle={{ paddingBottom: 4 }}
               data={wifiList}
               keyExtractor={(item) => item.BSSID}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   className="my-1 flex flex-row items-center justify-between gap-2 rounded-lg bg-gray-200 px-5 py-3.5"
                   onPress={() => handleWifiSelect(item.SSID)}>
-                  <View className="flex flex-row items-center justify-center">
+                  <View
+                    className="flex flex-row items-center justify-start"
+                    style={{ flex: 1, minWidth: 0 }}>
                     <Icon source="wifi" size={20} />
-                    <Text className="text-md ml-2 text-gray-800">{item.SSID}</Text>
+                    <Text
+                      className="text-md ml-2 text-gray-800"
+                      numberOfLines={2}
+                      style={{ flexShrink: 1, lineHeight: 20, paddingVertical: 2 }}>
+                      {item.SSID}
+                    </Text>
                     {Number.isFinite(item.level) ? (
                       <Text className="ml-2 text-sm text-gray-600">({item.level}dBm)</Text>
                     ) : null}
@@ -1157,9 +1211,19 @@ export const Header = () => {
                     )}
                   </View>
                   {robotStatus.currentConnectWifiSSID === item.SSID ? (
-                    <Text className="text-md text-gray-800">{t('common.connected')}</Text>
+                    <Text
+                      className="text-md ml-2 text-gray-800"
+                      numberOfLines={1}
+                      style={{ minWidth: 80, flexShrink: 0, textAlign: 'right' }}>
+                      {t('common.connected')}
+                    </Text>
                   ) : (
-                    <Text className="text-md text-gray-800">{t('common.connect')}</Text>
+                    <Text
+                      className="text-md ml-2 text-gray-800"
+                      numberOfLines={1}
+                      style={{ minWidth: 80, flexShrink: 0, textAlign: 'right' }}>
+                      {t('common.connect')}
+                    </Text>
                   )}
                 </TouchableOpacity>
               )}

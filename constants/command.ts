@@ -40,10 +40,10 @@ export enum Command {
   OldTest = 39, // 老化测试
   stopOldTest = 40, // 停止老化测试
   triggerTrack = 41, // 触发变轨
+  clearLashedCount = 42, // 清除绑扎数量
   countryQuery = 43, // 查询主板国家参数
   countryMismatch = 44, // App国家与主板国家不匹配
   countryMatched = 45, // App国家与主板国家匹配
-
 }
 
 export enum userDefaultEvent {

@@ -19,6 +19,7 @@ import {
   DownEvent,
   WifiEvent,
   GunErrorEvent,
+  AntiFallEvent,
 } from './events';
 import {
   globalGetConnect,
@@ -63,6 +64,11 @@ export class SocketManage {
   private countryVerificationGeneration = 0;
   private readonly countryQueryIntervalMs = 1000;
   private readonly countryResultIntervalMs = 500;
+  private readonly movementStopAckTimeoutMs = 500;
+  private movementStopAckTimeout: NodeJS.Timeout | null = null;
+  private movementCommandActive = false;
+  private awaitingMovementStopAck = false;
+  private movementStopRetrySent = false;
 
   // 初始连接重试相关
   private initialConnectAttempts = 0;
@@ -72,9 +78,8 @@ export class SocketManage {
 
   // 添加一个缓冲区属性
   private dataBuffer: string = '';
-  // 添加一个属性记录上次发送枪报错的时间
-  private lastGunErrorTime: number = 0;
-  private readonly GUN_ERROR_MIN_GAP = 3000; // 3秒内只允许发一次报错给业务层
+  private gunErrorClearTimeout: NodeJS.Timeout | null = null;
+  private readonly gunErrorClearDelayMs = 2000;
   // 私有构造函数，确保只能通过getInstance方法获取实例
   private constructor() {
     this.ip = '';
@@ -112,6 +117,7 @@ export class SocketManage {
       this.clearReconnectTimer();
       this.stopHeartbeat();
       this.resetCountryVerification();
+      this.resetMovementStopConfirmation();
 
       const previousSocket = this.socket;
       this.socket = null;
@@ -226,6 +232,7 @@ export class SocketManage {
     // 停止心跳
     this.stopHeartbeat();
     this.resetCountryVerification();
+    this.resetMovementStopConfirmation();
     ConnectDeviceInfo.disConnect();
     eventBus.publish(new WifiEvent(false).eventName, new WifiEvent(false).data);
     if (shouldReconnect) {
@@ -264,6 +271,7 @@ export class SocketManage {
     try {
       const eventData = event;
       console.log(`>>> [SOCKET_RAW] 收到原始数据: ${eventData}`);
+      this.handleMovementCommandAck(eventData);
       void this.handleCountryResponse(eventData);
       // 如果消息包含 'up'，表示机器人还活着，处理心跳响应
       if (eventData.trim() === 'up:ht') {
@@ -279,7 +287,7 @@ export class SocketManage {
       // 只处理来自机器人的上行消息 (forwardUp)
       if (commandPrefix === GlobalConst.forwardUp) {
         // 正确使用store更新调试日志和数据状态
-        const { setDebugLog, setBackBoardData, setMksData, setFrontBoardData } =
+        const { setDebugLog, setBackBoardData, setMksData, setFrontBoardData, setDataInspect } =
           useStore.getState();
         // 记录调试日志
         setDebugLog({
@@ -293,14 +301,14 @@ export class SocketManage {
             eventBus.publish(new IdEvent(listStr?.[2]).eventName, new IdEvent(listStr?.[2]).data);
             break;
           case GlobalConst.gunErrorEvent: // 枪口报错事件
-            const now = Date.now();
-            if (now - this.lastGunErrorTime < this.GUN_ERROR_MIN_GAP) {
-              console.warn('Gun error event ignored due to minimum gap');
-              break;
-            }
-            this.lastGunErrorTime = now;
-            eventBus.publish(new GunErrorEvent(1).eventName, new GunErrorEvent(1).data);
+            this.handleGunErrorSignal();
             break;
+          case GlobalConst.antiFall: {
+            const isActive = listStr?.[2]?.trim() === '1';
+            const antiFallEvent = new AntiFallEvent(isActive);
+            eventBus.publish(antiFallEvent.eventName, antiFallEvent.data);
+            break;
+          }
           case GlobalConst.electric: // 电量数据事件
             const temp = parseFloat(listStr?.[2]);
             ConnectDeviceInfo.electric = temp;
@@ -330,6 +338,26 @@ export class SocketManage {
             const temp5 = parseFloat(listStr?.[2]);
             eventBus.publish(new NodeEvent(temp5).eventName, new NodeEvent(temp5).data);
             break;
+          case GlobalConst.bindNodeStats: {
+            const statsPayload = listStr.slice(2).join(':');
+            const identifiedMatch = /(?:^|,)\s*identified\s*:\s*(\d+)/i.exec(statsPayload);
+            const lashedMatch = /(?:^|,)\s*lashed\s*:\s*(\d+)/i.exec(statsPayload);
+            const nextStats: Partial<{
+              identified_node_count: number;
+              lashed_count: number;
+            }> = {};
+
+            if (identifiedMatch) {
+              nextStats.identified_node_count = Number.parseInt(identifiedMatch[1], 10);
+            }
+            if (lashedMatch) {
+              nextStats.lashed_count = Number.parseInt(lashedMatch[1], 10);
+            }
+            if (Object.keys(nextStats).length > 0) {
+              setDataInspect(nextStats);
+            }
+            break;
+          }
           case GlobalConst.orbitChangeLaser:
             const temp6 = parseFloat(listStr?.[2]);
             eventBus.publish(
@@ -393,6 +421,7 @@ export class SocketManage {
       if (ConnectDeviceInfo.connectStatus && this.socket && !this.socket.destroyed) {
         console.log('[SOCKET_SEND]', fd);
         this.socket.write(fd);
+        this.handleMovementCommandSent(fd);
       } else {
         showNotifier({
           title: i18n.t('wifi.socketNotConnected'),
@@ -411,6 +440,104 @@ export class SocketManage {
         onPress: () => {},
       });
     }
+  }
+
+  private handleMovementCommandSent(data: string) {
+    const commandMatch = /^cmd:(1|2)$/.exec(data.trim());
+    if (commandMatch) {
+      const command = Number(commandMatch[1]);
+      this.clearMovementStopAckTimeout();
+      this.movementCommandActive = true;
+      this.awaitingMovementStopAck = false;
+      this.movementStopRetrySent = false;
+      const movementDirection = command === Command.goForward ? 'forward' : 'backward';
+      useStore.getState().setRobotStatus({
+        movementDirection,
+      });
+      return;
+    }
+
+    if (data.trim() === `${GlobalConst.forwardCmd}${Command.release}`) {
+      useStore.getState().setRobotStatus({ movementDirection: 'idle' });
+
+      if (this.movementCommandActive) {
+        this.movementCommandActive = false;
+        this.awaitingMovementStopAck = true;
+        this.movementStopRetrySent = false;
+      }
+
+      if (this.awaitingMovementStopAck) {
+        this.startMovementStopAckTimeout();
+      }
+    }
+  }
+
+  private handleMovementCommandAck(eventData: string) {
+    if (eventData.trim() !== 'up:ack:cmd:14' || !this.awaitingMovementStopAck) {
+      return;
+    }
+
+    this.clearMovementStopAckTimeout();
+    this.awaitingMovementStopAck = false;
+    this.movementStopRetrySent = false;
+    console.log('[MOVEMENT_STOP_ACK_RECEIVED]', { command: Command.release });
+  }
+
+  private startMovementStopAckTimeout() {
+    this.clearMovementStopAckTimeout();
+
+    this.movementStopAckTimeout = setTimeout(() => {
+      this.movementStopAckTimeout = null;
+      if (!this.awaitingMovementStopAck) {
+        return;
+      }
+
+      if (!this.movementStopRetrySent) {
+        this.movementStopRetrySent = true;
+        console.warn('[MOVEMENT_STOP_ACK_TIMEOUT_RETRY]', {
+          command: Command.release,
+          timeoutMs: this.movementStopAckTimeoutMs,
+        });
+        this.writeData(`${GlobalConst.forwardCmd}${Command.release}`);
+        return;
+      }
+
+      this.awaitingMovementStopAck = false;
+      console.warn('[MOVEMENT_STOP_ACK_RETRY_FAILED]', {
+        command: Command.release,
+        timeoutMs: this.movementStopAckTimeoutMs,
+      });
+    }, this.movementStopAckTimeoutMs);
+  }
+
+  private clearMovementStopAckTimeout() {
+    if (this.movementStopAckTimeout) {
+      clearTimeout(this.movementStopAckTimeout);
+      this.movementStopAckTimeout = null;
+    }
+  }
+
+  private resetMovementStopConfirmation() {
+    this.clearMovementStopAckTimeout();
+    this.movementCommandActive = false;
+    this.awaitingMovementStopAck = false;
+    this.movementStopRetrySent = false;
+    useStore.getState().setRobotStatus({ movementDirection: 'idle' });
+  }
+
+  private handleGunErrorSignal() {
+    const activeEvent = new GunErrorEvent(true);
+    eventBus.publish(activeEvent.eventName, activeEvent.data);
+
+    if (this.gunErrorClearTimeout) {
+      clearTimeout(this.gunErrorClearTimeout);
+    }
+
+    this.gunErrorClearTimeout = setTimeout(() => {
+      this.gunErrorClearTimeout = null;
+      const clearedEvent = new GunErrorEvent(false);
+      eventBus.publish(clearedEvent.eventName, clearedEvent.data);
+    }, this.gunErrorClearDelayMs);
   }
 
   private startCountryQuery() {
@@ -484,10 +611,7 @@ export class SocketManage {
         console.error('[COUNTRY_VERIFY] unable to reset login expiry', error);
       }
 
-      if (
-        verificationGeneration !== this.countryVerificationGeneration ||
-        !this.isConnected()
-      ) {
+      if (verificationGeneration !== this.countryVerificationGeneration || !this.isConnected()) {
         return;
       }
 
@@ -511,10 +635,7 @@ export class SocketManage {
       console.error('getSavedIpCountryPayload error', error);
     }
 
-    if (
-      verificationGeneration !== this.countryVerificationGeneration ||
-      !this.isConnected()
-    ) {
+    if (verificationGeneration !== this.countryVerificationGeneration || !this.isConnected()) {
       return;
     }
 
@@ -778,6 +899,7 @@ export class SocketManage {
     this.clearReconnectTimer();
     this.stopHeartbeat();
     this.resetCountryVerification();
+    this.resetMovementStopConfirmation();
 
     const socket = this.socket;
     this.socket = null;

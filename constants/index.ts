@@ -12,6 +12,7 @@ export enum GlobalConst {
   overage = 'overage', // 卷丝余量
   orbitLaser = 'orbitLaser', // 变轨激光
   nodeLaser = 'nodeLaser', // 节点激光
+  bindNodeStats = 'bindNodeStats', // 节点识别及绑扎数量
   orbitChangeLaser = 'orbitChangeLaser', //变轨激光范围
   nodeChangeLaser = 'nodeChangeLaser', //节点激光范围
   changeStatus = 'changed', //变轨状态
@@ -28,6 +29,7 @@ export enum GlobalConst {
   strip = 'antiFallLaser', //防坠激光
   prevention = 'autoFindPoint', //自动寻点
   gunErrorEvent = 'gunError',
+  antiFall = 'antiFall', // 机器脱离钢筋网后的防坠落紧急制动上报
   backBoard = 'BackBoard', // 后板
   frontBoard = 'FrontBoard', // 前板
   mks = 'mks', // MKS

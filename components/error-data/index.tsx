@@ -12,16 +12,13 @@ export const ErrorData = () => {
   const { t } = useTranslation();
   const { errorGroup } = useStore((state) => state);
 
-  const [items, setItems] = useState<{ key: number; index: string; time: string; name: string }[]>(
-    []
-  );
+  const [items, setItems] = useState<{ key: number; index: string; name: string }[]>([]);
 
   useEffect(() => {
     const temp = errorGroup.map((item, index) => {
       return {
         key: index,
-        index: item.errorId.toString(),
-        time: item.time,
+        index: (index + 1).toString(),
         name: ConnectDeviceInfo.getErrorInfo(item.errorId),
       };
     });
@@ -43,9 +40,10 @@ export const ErrorData = () => {
         </View>
         <DataTable>
           <DataTable.Header>
-            <DataTable.Title style={{ flex: 0.45 }}>{t('malfunction.index')}</DataTable.Title>
-            <DataTable.Title style={{ flex: 1.2 }}>{t('malfunction.time')}</DataTable.Title>
-            <DataTable.Title style={{ flex: 1.55 }} numeric>
+            <DataTable.Title style={{ flex: 0, width: '25%' }}>
+              {t('malfunction.index')}
+            </DataTable.Title>
+            <DataTable.Title style={{ flex: 0, width: '60%', marginLeft: 'auto' }} numeric>
               {t('malfunction.name')}
             </DataTable.Title>
           </DataTable.Header>
@@ -54,17 +52,12 @@ export const ErrorData = () => {
             items.slice(0, 3).map((item) => (
               <DataTable.Row key={item.key}>
                 <DataTable.Cell
-                  style={{ flex: 0.45 }}
+                  style={{ flex: 0, width: '25%' }}
                   textStyle={{ textAlign: 'center', fontSize: 12 }}>
                   {item.index}
                 </DataTable.Cell>
                 <DataTable.Cell
-                  style={{ flex: 1.2 }}
-                  textStyle={{ textAlign: 'center', fontSize: 12 }}>
-                  {item.time}
-                </DataTable.Cell>
-                <DataTable.Cell
-                  style={{ flex: 1.55 }}
+                  style={{ flex: 0, width: '60%', marginLeft: 'auto' }}
                   textStyle={{ textAlign: 'center', fontSize: 12 }}
                   numeric>
                   {item.name}

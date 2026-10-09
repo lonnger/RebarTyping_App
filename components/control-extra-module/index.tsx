@@ -27,9 +27,14 @@ export const ControlExtraModule = () => {
   );
   const isEnglishManualMode =
     i18n.language.startsWith('en') && robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL;
+  const isAutoMode = robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO;
   const manualButtonFontSize = isEnglishManualMode
     ? Math.max(10, scaleHomeValue(HOME_LAYOUT.right.manualEnglishButtonFontSize, scale))
     : extraButtonsFontSize;
+  const autoButtonFontSize = Math.max(
+    9,
+    scaleHomeValue(HOME_LAYOUT.right.autoButtonFontSize, scale)
+  );
   const isInLockedMode = () => {
     if (robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED) {
       showNotifier({
@@ -131,6 +136,10 @@ export const ControlExtraModule = () => {
     sendCmdDispatch(Command.triggerTrack);
   };
 
+  const clearLashedCount = () => {
+    sendCmdDispatch(Command.clearLashedCount);
+  };
+
   return (
     <View className="relative flex w-full flex-row items-end justify-center">
       <View
@@ -138,7 +147,9 @@ export const ControlExtraModule = () => {
         style={{
           width: isEnglishManualMode
             ? HOME_LAYOUT.right.manualEnglishButtonsRowWidth
-            : HOME_LAYOUT.right.extraButtonsRowWidth,
+            : isAutoMode
+              ? HOME_LAYOUT.right.autoButtonsRowWidth
+              : HOME_LAYOUT.right.extraButtonsRowWidth,
           rowGap: extraButtonsGap,
           columnGap: extraButtonsGap,
           flexWrap: 'nowrap',
@@ -153,7 +164,7 @@ export const ControlExtraModule = () => {
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
             labelStyle={{ fontSize: manualButtonFontSize }}
             onPress={robotReboot}>
-            {t('common.tyingRobotRestart')}
+            {t('common.cutWire')}
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
@@ -163,7 +174,7 @@ export const ControlExtraModule = () => {
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: extraButtonsFontSize }}
+            labelStyle={{ fontSize: autoButtonFontSize }}
             onPress={cutWire}>
             {t('common.cutWire')}
           </Button>
@@ -175,9 +186,21 @@ export const ControlExtraModule = () => {
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: extraButtonsFontSize }}
+            labelStyle={{ fontSize: autoButtonFontSize }}
             onPress={triggerTrack}>
             {t('common.triggertrack')}
+          </Button>
+        ) : null}
+        {isAutoMode ? (
+          <Button
+            compact
+            icon="delete-outline"
+            mode="elevated"
+            style={{ flex: 1 }}
+            contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
+            labelStyle={{ fontSize: autoButtonFontSize }}
+            onPress={clearLashedCount}>
+            {t('common.clearLashedCount')}
           </Button>
         ) : null}
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL ? (

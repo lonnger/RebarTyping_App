@@ -109,10 +109,22 @@ export class NodeEvent {
 export class GunErrorEvent {
   public eventName: eventBusKey;
   public data;
-  constructor(eError: number) {
+  constructor(isActive: boolean) {
     this.eventName = eventBusKey.GunErrorEvent;
     this.data = {
-      eError,
+      isActive,
+    };
+  }
+}
+
+// 防坠落紧急制动通知
+export class AntiFallEvent {
+  public eventName: eventBusKey;
+  public data;
+  constructor(isActive: boolean) {
+    this.eventName = eventBusKey.AntiFallEvent;
+    this.data = {
+      isActive,
     };
   }
 }

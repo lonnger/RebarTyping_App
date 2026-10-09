@@ -123,6 +123,11 @@ export const HOME_LAYOUT = {
       reservedHeight: 220,
       // 除数越小，按高度计算出的图片越大。
       heightDivisor: 2.25,
+      // 前进/后退动画相对原机器人图片的放大倍数，以及动画原始宽高比。
+      movementWidthMultiplier: 1.22,
+      movementAspectRatio: 16 / 9,
+      // 上下两张机器人图片之间的距离。
+      betweenImagesSpacing: 25,
       // 第二张图片下方到参数设置按钮的距离。
       bottomSpacing: 20,
     },
@@ -252,10 +257,14 @@ export const HOME_LAYOUT = {
     extraButtonsRowWidth: '92%' as const,
     // 英文手动模式按钮文字较长，允许使用完整内容宽度。
     manualEnglishButtonsRowWidth: '100%' as const,
+    // 自动模式包含三个底部按钮，使用完整内容宽度。
+    autoButtonsRowWidth: '100%' as const,
     // 底部功能按钮文字大小；小屏会随全局比例缩小，但最低保持 10。
     extraButtonsFontSize: 11,
     // 手动模式英文按钮使用接近其他底部按钮的字号，并通过完整行宽容纳长文案。
     manualEnglishButtonFontSize: 10,
+    // 自动模式三个并排按钮的文字大小。
+    autoButtonFontSize: 10,
     // 功能按钮内容的左右内边距；设小一些可保证 8 英寸平板上两个按钮并排。
     extraButtonContentPaddingHorizontal: 0,
   },

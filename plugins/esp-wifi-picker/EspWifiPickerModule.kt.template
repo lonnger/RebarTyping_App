@@ -269,6 +269,8 @@ class EspWifiPickerModule(
   }
 
   companion object {
-    private const val WIFI_REQUEST_TIMEOUT_MS = 60_000
+    // Android does not reliably report an incorrect WPA2 password immediately.
+    // Keep the request long enough for a normal association, but do not leave the UI waiting a full minute.
+    private const val WIFI_REQUEST_TIMEOUT_MS = 15_000
   }
 }

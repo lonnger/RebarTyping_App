@@ -6,6 +6,8 @@ type GlobalDialogConfig = {
   title: string;
   content: string;
   callback: () => void;
+  showCancel?: boolean;
+  confirmText?: string;
 };
 
 export const GlobalDialogManager: React.RefObject<{
@@ -54,11 +56,13 @@ const GlobalDialog = forwardRef((_: any, ref: any) => {
           <Text>{config.content}</Text>
         </Dialog.Content>
         <Dialog.Actions>
-          <Button onPress={hideDialog}>
-            <Text>{t('common.cancel')}</Text>
-          </Button>
+          {config.showCancel !== false ? (
+            <Button onPress={hideDialog}>
+              <Text>{t('common.cancel')}</Text>
+            </Button>
+          ) : null}
           <Button onPress={checkedCallback}>
-            <Text>{t('common.confirm')}</Text>
+            <Text>{config.confirmText ?? t('common.confirm')}</Text>
           </Button>
         </Dialog.Actions>
       </Dialog>

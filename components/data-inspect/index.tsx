@@ -17,21 +17,15 @@ export const DataInspect = () => {
     setItems([
       {
         key: 1,
-        name: t('common.trackLaser'),
-        value: data_inspect.track_laser_num,
-        unit: 'mm',
+        name: t('common.identifiedNodeCount'),
+        value: data_inspect.identified_node_count,
+        unit: '',
       },
       {
         key: 2,
-        name: t('common.nodeLaser'),
-        value: data_inspect.node_laser_num,
-        unit: 'mm',
-      },
-      {
-        key: 3,
-        name: t('common.overage'),
-        value: data_inspect.overage_num,
-        unit: '%',
+        name: t('common.lashedCount'),
+        value: data_inspect.lashed_count,
+        unit: '',
       },
     ]);
   }, [data_inspect, t]);
@@ -48,7 +42,7 @@ export const DataInspect = () => {
 
         <DataTable>
           {items.map((item) => (
-            <DataTable.Row key={item.key}>
+            <DataTable.Row key={item.key} style={{ minHeight: 40 }}>
               <DataTable.Cell style={{ flex: 3 }}>
                 <Text
                   adjustsFontSizeToFit

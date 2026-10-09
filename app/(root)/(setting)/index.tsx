@@ -126,14 +126,18 @@ export default function () {
 
                     <TextInput
                       label={t('setting.companyAddress')}
-                      value={canLoginInfo.position}
+                      value={t('setting.companyAddressValue')}
+                      multiline
+                      numberOfLines={2}
                       disabled
                       style={{ backgroundColor: '#01264142' }}
                     />
 
                     <TextInput
                       label={t('setting.companyName')}
-                      value={canLoginInfo.company}
+                      value={t('setting.companyNameValue')}
+                      multiline
+                      numberOfLines={2}
                       disabled
                       style={{ backgroundColor: '#01264142' }}
                     />

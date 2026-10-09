@@ -2,16 +2,18 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlobalActivityIndicatorManager } from '../activity-indicator-global';
+import { GlobalDialogManager } from '../global-dialog';
 
 import { ChangeState, DownState, RebootState, TyingState } from '@/constants';
 import { eventBusKey } from '@/constants/event';
 import useStore from '@/store';
+import { ROBOT_CURRENT_MODE } from '@/types';
+import { ConnectDeviceInfo } from '@/utils/connectDeviceInfo';
 import eventBus from '@/utils/eventBus';
 
 export const EventHandler = () => {
-  const { setRobotStatus, setWorkParams, setErrorGroup, errorGroup, setDataInspect } = useStore(
-    (state) => state
-  );
+  const { setRobotStatus, setWorkParams, setErrorGroup, removeErrorGroup, setDataInspect } =
+    useStore((state) => state);
   const { t } = useTranslation();
   useEffect(() => {
     eventBus.subscribe(eventBusKey.StopEvent, ({ eStop }: { eStop: boolean }) => {
@@ -103,29 +105,36 @@ export const EventHandler = () => {
     });
 
     eventBus.subscribe(eventBusKey.ErrorEvent, ({ eError }: { eError: number }) => {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes() < 10 ? `0${now.getMinutes()}` : now.getMinutes();
-      const seconds = now.getSeconds() < 10 ? `0${now.getSeconds()}` : now.getSeconds();
-      const copyErrorGroup = [...errorGroup];
-      let nowIndex = 0; //错误存在的下标
-      let isExist = false;
-      for (let i = 0; i < copyErrorGroup.length; i++) {
-        if (eError - 1 === copyErrorGroup[i].errorId) {
-          isExist = true;
-          nowIndex = i;
-          break;
-        }
-      }
-      if (isExist) {
-        copyErrorGroup[nowIndex].time = `${hours}:${minutes}:${seconds}`;
+      setErrorGroup({ errorId: eError - 1 });
+    });
+
+    eventBus.subscribe(eventBusKey.GunErrorEvent, ({ isActive }: { isActive: boolean }) => {
+      if (isActive) {
+        setErrorGroup({ errorId: ConnectDeviceInfo.gunErrorId });
       } else {
-        const temp = {
-          time: `${hours}:${minutes}:${seconds}`,
-          errorId: eError - 1,
-        };
-        setErrorGroup(temp);
+        removeErrorGroup(ConnectDeviceInfo.gunErrorId);
       }
+    });
+
+    eventBus.subscribe(eventBusKey.AntiFallEvent, ({ isActive }: { isActive: boolean }) => {
+      const { robotStatus } = useStore.getState();
+      if (!isActive || robotStatus.currentMode !== ROBOT_CURRENT_MODE.AUTO) {
+        return;
+      }
+
+      setRobotStatus({
+        currentMode: ROBOT_CURRENT_MODE.MANUAL,
+        currentBindingMode: '',
+        isWorking: false,
+        movementDirection: 'idle',
+      });
+      GlobalDialogManager.current?.show({
+        title: t('robot.antiFallEmergencyTitle'),
+        content: t('robot.antiFallEmergencyTips'),
+        showCancel: false,
+        confirmText: t('common.iKnow'),
+        callback: () => {},
+      });
     });
 
     return () => {

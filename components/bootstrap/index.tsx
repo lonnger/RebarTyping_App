@@ -32,12 +32,6 @@ import { SocketManage } from '@/utils/socketManage';
 import { printTerminalLogo } from '@/utils/terminalLog';
 // 这个组件主要做一些初始化功能
 export const Bootstrap = () => {
-  //新增一个状态来控制枪口错误提示的频率，避免短时间内多次触发
-  const GUN_ERROR_THROTTLE_MS = 5000;
-  const gunAlarmStateRef = useRef({
-    isActive: false,
-    lastShownAt: 0,
-  });
   const sessionRedirectingRef = useRef(false);
   //读取本地存储中的用户信息
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
@@ -128,34 +122,6 @@ export const Bootstrap = () => {
     return eventBus.subscribe(eventBusKey.CountryMismatchLogoutEvent, () => {
       void redirectToLoginAfterCountryMismatch();
     });
-  }, []);
-
-  //专门监听 GunErrorEvent（枪口异常）。一旦触发，会立即发送 lockUp（锁定）命令并弹出红色报错
-  // 方案：使用依赖数组确保拿到最新的 rebootState
-  useEffect(() => {
-    const onGunError = () => {
-      // 模式切换
-      //sendCmdDispatch(Command.lockUp);
-      console.log('进入onGunError');
-      //console.log('机器人当前状态 (robotStatus):', useStore.getState().robotStatus);
-
-      // 弹窗提示
-      showNotifier({
-        title: t('robot.gunError'),
-        message: t('robot.gunErrorTips'),
-        type: 'error',
-        duration: 3000,
-        onPress: () => {},
-      });
-    };
-
-    // 只有不在重启状态时，才建立订阅
-    eventBus.subscribe(eventBusKey.GunErrorEvent, onGunError);
-
-    return () => {
-      // 状态切换时，自动销毁旧的订阅，清理现场
-      eventBus.unsubscribe(eventBusKey.GunErrorEvent, onGunError);
-    };
   }, []);
 
   //handleAppStateChange 处理应用状态变化时的逻辑

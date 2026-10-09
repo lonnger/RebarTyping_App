@@ -1,6 +1,7 @@
 import { TyingState } from '@/constants';
 
 export class ConnectDeviceInfo {
+  static readonly gunErrorId = 10;
   private static _wifiIp: string = ''; // wifi的IP地址
   static connectStatus: boolean = false; // wifi是否连接成功
   static wifiPort: number = 8080; // wifi服务端的端口
@@ -19,7 +20,7 @@ export class ConnectDeviceInfo {
     '前、后横移电机过负载',
     '前、后轮毂电机过负载',
     'MKS电机过负载',
-    '绑扎抢故障',
+    '绑扎枪故障',
     '丝盘余量不足',
     '变轨失败',
   ];
