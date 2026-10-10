@@ -25,9 +25,11 @@ import { releaseEspWifiFromSystem } from '@/utils/espWifiSystemPicker';
 import { clearOnlineLoginAt } from '@/utils/loginSession';
 import { SocketManage } from '@/utils/socketManage';
 
+type AppLanguage = 'cn' | 'en' | 'hk' | 'ar' | 'es';
+
 export default function () {
   const { canLoginInfo, setAuthenticationStatus } = useStore((state) => state);
-  const [language, setLanguage] = useState<'cn' | 'en' | 'hk'>('en');
+  const [language, setLanguage] = useState<AppLanguage>('en');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const userInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_USER_INFO);
   const languageInfo = useAsyncStorage(storage_config.LOCAL_STORAGE_LANGUAGE);
@@ -36,14 +38,14 @@ export default function () {
   useEffect(() => {
     languageInfo.getItem().then((value) => {
       if (value) {
-        setLanguage(value as 'cn' | 'en' | 'hk');
+        setLanguage(value as AppLanguage);
       } else {
         saveLanguage('en');
       }
     });
   }, []);
 
-  const saveLanguage = (value: 'cn' | 'en' | 'hk') => {
+  const saveLanguage = (value: AppLanguage) => {
     setLanguage(value);
     languageInfo.setItem(value);
     i18n.changeLanguage(value);
@@ -169,7 +171,7 @@ export default function () {
                 <SegmentedButtons
                   value={language}
                   style={{ backgroundColor: '#fff', padding: 10 }}
-                  onValueChange={(value) => saveLanguage(value as 'cn' | 'en' | 'hk')}
+                  onValueChange={(value) => saveLanguage(value as AppLanguage)}
                   buttons={[
                     {
                       value: 'cn',
@@ -182,6 +184,14 @@ export default function () {
                     {
                       value: 'hk',
                       label: '繁體中文',
+                    },
+                    {
+                      value: 'ar',
+                      label: 'العربية',
+                    },
+                    {
+                      value: 'es',
+                      label: 'Español',
                     },
                   ]}
                 />

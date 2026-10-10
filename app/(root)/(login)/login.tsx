@@ -760,9 +760,16 @@ export default function Login() {
                       <TouchableOpacity
                         className="my-1 flex flex-row items-center justify-between rounded-lg bg-gray-100 px-5 py-3.5"
                         onPress={() => handleInternetWifiSelect(item.SSID)}>
-                        <View className="flex flex-row items-center">
+                        <View
+                          className="flex flex-row items-center"
+                          style={{ flex: 1, minWidth: 0 }}>
                           <Icon source="wifi" size={20} />
-                          <Text className="ml-2 text-base text-gray-800">{item.SSID}</Text>
+                          <Text
+                            className="ml-2 text-base text-gray-800"
+                            numberOfLines={2}
+                            style={{ flexShrink: 1, lineHeight: 20, paddingVertical: 2 }}>
+                            {item.SSID}
+                          </Text>
                           <Text className="ml-2 text-sm text-gray-600">({item.level}dBm)</Text>
                           {savedWifiPasswords[item.SSID] ? (
                             <View className="ml-2">
@@ -770,7 +777,16 @@ export default function Login() {
                             </View>
                           ) : null}
                         </View>
-                        <Text className="text-sm text-gray-700">
+                        <Text
+                          className="ml-2 text-sm text-gray-700"
+                          numberOfLines={1}
+                          style={{
+                            minWidth: 96,
+                            flexShrink: 0,
+                            textAlign: 'right',
+                            lineHeight: 20,
+                            paddingVertical: 2,
+                          }}>
                           {currentInternetWifiSSID === item.SSID
                             ? t('common.connected')
                             : t('common.connect')}

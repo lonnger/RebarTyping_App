@@ -71,6 +71,13 @@ export const HOME_LAYOUT = {
     controls: {
       // 软急停、锁屏、WiFi、设置、电量之间的距离。
       gap: 8,
+      // 西班牙语、阿拉伯语等长文案使用的紧凑间距和尺寸。
+      compactGap: 4,
+      compactPillHorizontalPadding: 12,
+      compactLabelFontSize: 12,
+      compactIconSize: 16,
+      compactButtonLabelMarginHorizontal: 4,
+      compactWifiLabelMaxWidth: 115,
       // 右侧按钮行距离 Header 顶部的额外距离。
       rowTopPadding: 6,
       // WiFi 和设置胶囊按钮的横向/纵向内部留白。
@@ -226,6 +233,13 @@ export const HOME_LAYOUT = {
       startStopGap: 40,
       // 开始/停止按钮文字大小。
       startStopFontSize: 16,
+      // 开始/暂停按钮使用相同宽度；小屏下仍保留足够空间容纳阿拉伯语文案。
+      startStopButtonWidth: 128,
+      startStopButtonMinWidth: 110,
+      startStopArabicButtonWidth: 150,
+      startStopArabicButtonMinWidth: 135,
+      startStopArabicHorizontalOffset: 10,
+      startStopArabicLabelMarginHorizontal: 4,
       // 跳扎数量选择区域与方向控制区域之间的距离。
       skipBindingMarginTop: 100,
     },
@@ -263,8 +277,12 @@ export const HOME_LAYOUT = {
     extraButtonsFontSize: 11,
     // 手动模式英文按钮使用接近其他底部按钮的字号，并通过完整行宽容纳长文案。
     manualEnglishButtonFontSize: 10,
-    // 自动模式三个并排按钮的文字大小。
+    // 自动模式三个并排按钮的文字大小；中文使用更大的字号，其他语言保留紧凑字号。
     autoButtonFontSize: 10,
+    autoChineseButtonFontSize: 13,
+    // 阿拉伯语为 RTL，减少标签横向留白，避免省略号挤占按钮文字。
+    autoArabicButtonMinFontSize: 9,
+    autoArabicButtonLabelMarginHorizontal: 2,
     // 功能按钮内容的左右内边距；设小一些可保证 8 英寸平板上两个按钮并排。
     extraButtonContentPaddingHorizontal: 0,
   },

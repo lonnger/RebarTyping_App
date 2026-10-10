@@ -16,6 +16,16 @@ const releaseNotes = {
       '新增帳戶使用期限提示，方便及時更新登錄狀態。',
       '優化系統穩定性及裝置連接體驗。',
     ],
+    ar: [
+      'تمت إضافة تسجيل الدخول عبر الإنترنت إلى صفحة تسجيل الدخول لتحسين تجربة الاستخدام.',
+      'تمت إضافة تذكيرات بانتهاء صلاحية الحساب لمساعدة المستخدمين على تجديد حالة تسجيل الدخول في الوقت المناسب.',
+      'تم تحسين استقرار النظام وتجربة الاتصال بالجهاز.',
+    ],
+    es: [
+      'Se añadió el inicio de sesión en línea para mejorar la experiencia de acceso.',
+      'Se añadieron recordatorios de caducidad de la cuenta para renovar el acceso a tiempo.',
+      'Se mejoraron la estabilidad del sistema y la conexión con el dispositivo.',
+    ],
   },
 };
 

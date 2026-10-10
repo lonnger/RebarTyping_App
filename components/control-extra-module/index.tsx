@@ -13,7 +13,7 @@ import { showNotifier } from '@/utils/notifier';
 import { SocketManage } from '@/utils/socketManage';
 
 export const ControlExtraModule = () => {
-  const { robotStatus, workParams, setWorkParams } = useStore((state) => state);
+  const { robotStatus, workParams, setWorkParams, setDataInspect } = useStore((state) => state);
   const { t, i18n } = useTranslation();
   const { scale } = useHomeLayoutScale();
   const extraButtonsGap = scaleHomeValue(HOME_LAYOUT.right.extraButtonsGap, scale);
@@ -25,16 +25,33 @@ export const ControlExtraModule = () => {
     HOME_LAYOUT.right.extraButtonContentPaddingHorizontal,
     scale
   );
-  const isEnglishManualMode =
-    i18n.language.startsWith('en') && robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL;
+  const usesWideManualLayout =
+    ['en', 'es', 'ar'].some((language) => i18n.language.startsWith(language)) &&
+    robotStatus.currentMode === ROBOT_CURRENT_MODE.MANUAL;
   const isAutoMode = robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO;
-  const manualButtonFontSize = isEnglishManualMode
+  const manualButtonFontSize = usesWideManualLayout
     ? Math.max(10, scaleHomeValue(HOME_LAYOUT.right.manualEnglishButtonFontSize, scale))
     : extraButtonsFontSize;
-  const autoButtonFontSize = Math.max(
-    9,
-    scaleHomeValue(HOME_LAYOUT.right.autoButtonFontSize, scale)
+  const usesLargeAutoButtonFont = ['cn', 'hk'].some((language) =>
+    i18n.language.startsWith(language)
   );
+  const usesArabicAutoButtonLayout = i18n.language.startsWith('ar');
+  const autoButtonFontSize = Math.max(
+    usesArabicAutoButtonLayout ? HOME_LAYOUT.right.autoArabicButtonMinFontSize : 10,
+    scaleHomeValue(
+      usesLargeAutoButtonFont
+        ? HOME_LAYOUT.right.autoChineseButtonFontSize
+        : HOME_LAYOUT.right.autoButtonFontSize,
+      scale
+    )
+  );
+  const autoButtonLabelStyle = {
+    fontSize: autoButtonFontSize,
+    flexShrink: 1,
+    ...(usesArabicAutoButtonLayout
+      ? { marginHorizontal: HOME_LAYOUT.right.autoArabicButtonLabelMarginHorizontal }
+      : {}),
+  };
   const isInLockedMode = () => {
     if (robotStatus.currentMode === ROBOT_CURRENT_MODE.LOCKED) {
       showNotifier({
@@ -120,7 +137,13 @@ export const ControlExtraModule = () => {
         2,
         30
       );
-      sendCmdDispatch(Command.lashedReboot);
+      sendCmdWithRepeat(
+        () => {
+          sendCmdDispatch(Command.lashedReboot);
+        },
+        3,
+        30
+      );
     }
   };
 
@@ -129,7 +152,13 @@ export const ControlExtraModule = () => {
       return;
     }
 
-    sendCmdDispatch(Command.lashedReboot);
+    sendCmdWithRepeat(
+      () => {
+        sendCmdDispatch(Command.lashedReboot);
+      },
+      3,
+      30
+    );
   };
 
   const triggerTrack = () => {
@@ -138,6 +167,7 @@ export const ControlExtraModule = () => {
 
   const clearLashedCount = () => {
     sendCmdDispatch(Command.clearLashedCount);
+    setDataInspect({ lashed_count: 0 });
   };
 
   return (
@@ -145,7 +175,7 @@ export const ControlExtraModule = () => {
       <View
         className="flex flex-row"
         style={{
-          width: isEnglishManualMode
+          width: usesWideManualLayout
             ? HOME_LAYOUT.right.manualEnglishButtonsRowWidth
             : isAutoMode
               ? HOME_LAYOUT.right.autoButtonsRowWidth
@@ -170,11 +200,11 @@ export const ControlExtraModule = () => {
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
           <Button
             compact
-            icon="content-cut"
+            icon={usesArabicAutoButtonLayout ? undefined : 'content-cut'}
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: autoButtonFontSize }}
+            labelStyle={autoButtonLabelStyle}
             onPress={cutWire}>
             {t('common.cutWire')}
           </Button>
@@ -182,11 +212,11 @@ export const ControlExtraModule = () => {
         {robotStatus.currentMode === ROBOT_CURRENT_MODE.AUTO ? (
           <Button
             compact
-            icon="restart"
+            icon={usesArabicAutoButtonLayout ? undefined : 'restart'}
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: autoButtonFontSize }}
+            labelStyle={autoButtonLabelStyle}
             onPress={triggerTrack}>
             {t('common.triggertrack')}
           </Button>
@@ -194,11 +224,11 @@ export const ControlExtraModule = () => {
         {isAutoMode ? (
           <Button
             compact
-            icon="delete-outline"
+            icon={usesArabicAutoButtonLayout ? undefined : 'delete-outline'}
             mode="elevated"
             style={{ flex: 1 }}
             contentStyle={{ paddingHorizontal: extraButtonContentPaddingHorizontal }}
-            labelStyle={{ fontSize: autoButtonFontSize }}
+            labelStyle={autoButtonLabelStyle}
             onPress={clearLashedCount}>
             {t('common.clearLashedCount')}
           </Button>

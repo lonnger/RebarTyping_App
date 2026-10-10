@@ -25,10 +25,32 @@ export const ControlAutoSelectDirection = ({
   const { robotStatus } = useStore((state) => state);
   const [isLeftOrRight, setIsLeftOrRight] = useState<DIRECTION | undefined>(undefined);
   const [isForwardOrBackward, setIsForwardOrBackward] = useState<DIRECTION | undefined>(undefined);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { automaticDirection } = HOME_LAYOUT.right;
   const { scale } = useHomeLayoutScale();
   const scaled = (value: number) => scaleHomeValue(value, scale);
+  const usesArabicButtonLayout = i18n.language.startsWith('ar');
+  const startStopButtonWidth = Math.max(
+    usesArabicButtonLayout
+      ? automaticDirection.startStopArabicButtonMinWidth
+      : automaticDirection.startStopButtonMinWidth,
+    scaled(
+      usesArabicButtonLayout
+        ? automaticDirection.startStopArabicButtonWidth
+        : automaticDirection.startStopButtonWidth
+    )
+  );
+  const startStopHorizontalOffset = scaled(
+    usesArabicButtonLayout
+      ? automaticDirection.startStopArabicHorizontalOffset
+      : automaticDirection.startStopHorizontalOffset
+  );
+  const startStopLabelStyle = {
+    fontSize: Math.max(12, scaled(automaticDirection.startStopFontSize)),
+    ...(usesArabicButtonLayout
+      ? { marginHorizontal: automaticDirection.startStopArabicLabelMarginHorizontal }
+      : {}),
+  };
   const fullBindingDirectionOffsetY =
     robotStatus.currentBindingMode === ROBOT_WORK_MODE.FULL_BINDING ||
     robotStatus.currentBindingMode === ROBOT_WORK_MODE.WITHOUT_BINDING
@@ -76,10 +98,11 @@ export const ControlAutoSelectDirection = ({
             buttonColor="#012641"
             textColor="#ffffff"
             style={{
+              width: startStopButtonWidth,
               top: scaled(automaticDirection.startStopVerticalOffset),
-              left: -scaled(automaticDirection.startStopHorizontalOffset),
+              left: -startStopHorizontalOffset,
             }}
-            labelStyle={{ fontSize: Math.max(12, scaled(automaticDirection.startStopFontSize)) }}
+            labelStyle={startStopLabelStyle}
             onPress={() => {
               onStart();
             }}>
@@ -91,10 +114,11 @@ export const ControlAutoSelectDirection = ({
             buttonColor="#FD1D1DD5"
             textColor="#ffffff"
             style={{
+              width: startStopButtonWidth,
               top: scaled(automaticDirection.startStopVerticalOffset),
-              right: -scaled(automaticDirection.startStopHorizontalOffset),
+              right: -startStopHorizontalOffset,
             }}
-            labelStyle={{ fontSize: Math.max(12, scaled(automaticDirection.startStopFontSize)) }}
+            labelStyle={startStopLabelStyle}
             onPress={() => {
               onStop();
             }}>

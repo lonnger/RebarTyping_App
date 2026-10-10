@@ -3,8 +3,10 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 // 导入语言文件
+import ar from './locales/ar.json';
 import cn from './locales/cn.json';
 import en from './locales/en.json';
+import es from './locales/es.json';
 import hk from './locales/hk.json';
 
 import { storage_config } from '@/constants';
@@ -19,6 +21,12 @@ const resources = {
   },
   en: {
     translation: en,
+  },
+  ar: {
+    translation: ar,
+  },
+  es: {
+    translation: es,
   },
 };
 

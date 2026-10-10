@@ -62,7 +62,7 @@ export const Header = () => {
   const segments = useSegments();
   const isLoginPage = segments.includes('(login)');
   const isSettingPage = segments.includes('(setting)');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // 连接WiFi密码对话框是否可见
   const [wifiPasswordDialogVisible, setWifiPasswordDialogVisible] = useState(false);
   const hideWifiPasswordDialog = () => setWifiPasswordDialogVisible(false);
@@ -1066,6 +1066,24 @@ export const Header = () => {
   const robotWifiButtonLabel =
     currentWifiSSID && isRobotWifiSSID(currentWifiSSID) ? currentWifiSSID : t('common.wifi');
   const { header } = HOME_LAYOUT;
+  const usesCompactHeaderControls = ['es', 'ar'].some((language) =>
+    i18n.language.startsWith(language)
+  );
+  const headerControlsGap = scaled(
+    usesCompactHeaderControls ? header.controls.compactGap : header.controls.gap
+  );
+  const pillHorizontalPadding = scaled(
+    usesCompactHeaderControls
+      ? header.controls.compactPillHorizontalPadding
+      : header.controls.pillHorizontalPadding
+  );
+  const compactButtonLabelStyle = usesCompactHeaderControls
+    ? {
+        fontSize: scaled(header.controls.compactLabelFontSize),
+        marginHorizontal: scaled(header.controls.compactButtonLabelMarginHorizontal),
+      }
+    : undefined;
+  const headerIconSize = scaled(usesCompactHeaderControls ? header.controls.compactIconSize : 18);
 
   return (
     <View
@@ -1096,7 +1114,7 @@ export const Header = () => {
         <View
           className="flex flex-row items-center"
           style={{
-            gap: scaled(header.controls.gap),
+            gap: headerControlsGap,
             transform: [
               { translateX: scaled(header.controls.offsetX) },
               { translateY: scaled(header.controls.offsetY) },
@@ -1105,20 +1123,28 @@ export const Header = () => {
           <View
             className="flex flex-row items-center"
             style={{
-              gap: scaled(header.controls.gap),
+              gap: headerControlsGap,
               paddingTop: scaled(header.controls.rowTopPadding),
             }}>
             {!isLoginPage ? (
               <Button
+                compact={usesCompactHeaderControls}
                 icon={robotStatus.robotDangerStatus ? 'pause' : 'play'}
                 mode="contained"
                 buttonColor="red"
+                labelStyle={compactButtonLabelStyle}
                 onPress={handleForcePause}>
                 <Text>{t('common.softStop')}</Text>
               </Button>
             ) : null}
 
-            <Button icon="lock" mode="contained" buttonColor="#041FA5C0" onPress={handleLockScreen}>
+            <Button
+              compact={usesCompactHeaderControls}
+              icon="lock"
+              mode="contained"
+              buttonColor="#041FA5C0"
+              labelStyle={compactButtonLabelStyle}
+              onPress={handleLockScreen}>
               <Text>{t('common.lockScreenTips')}</Text>
             </Button>
 
@@ -1126,13 +1152,26 @@ export const Header = () => {
               <TouchableOpacity
                 className="flex flex-row items-center rounded-full bg-white"
                 style={{
-                  gap: scaled(header.controls.gap),
-                  paddingHorizontal: scaled(header.controls.pillHorizontalPadding),
+                  gap: headerControlsGap,
+                  paddingHorizontal: pillHorizontalPadding,
                   paddingVertical: scaled(header.controls.pillVerticalPadding),
                 }}
                 onPress={openWifiSetting}>
-                <WifiHigh size={18} weight="bold" />
-                <Text className="text-sm text-gray-800">{robotWifiButtonLabel}</Text>
+                <WifiHigh size={headerIconSize} weight="bold" />
+                <Text
+                  className="text-sm text-gray-800"
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
+                  style={
+                    usesCompactHeaderControls
+                      ? {
+                          maxWidth: scaled(header.controls.compactWifiLabelMaxWidth),
+                          fontSize: scaled(header.controls.compactLabelFontSize),
+                        }
+                      : undefined
+                  }>
+                  {robotWifiButtonLabel}
+                </Text>
               </TouchableOpacity>
             ) : null}
 
@@ -1140,13 +1179,21 @@ export const Header = () => {
               <TouchableOpacity
                 className="flex flex-row items-center rounded-full bg-white"
                 style={{
-                  gap: scaled(header.controls.gap),
-                  paddingHorizontal: scaled(header.controls.pillHorizontalPadding),
+                  gap: headerControlsGap,
+                  paddingHorizontal: pillHorizontalPadding,
                   paddingVertical: scaled(header.controls.pillVerticalPadding),
                 }}
                 onPress={gotoSetting}>
-                <Gear size={18} weight="bold" />
-                <Text className="text-sm text-gray-800">{t('common.settings')}</Text>
+                <Gear size={headerIconSize} weight="bold" />
+                <Text
+                  className="text-sm text-gray-800"
+                  style={
+                    usesCompactHeaderControls
+                      ? { fontSize: scaled(header.controls.compactLabelFontSize) }
+                      : undefined
+                  }>
+                  {t('common.settings')}
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -1214,14 +1261,26 @@ export const Header = () => {
                     <Text
                       className="text-md ml-2 text-gray-800"
                       numberOfLines={1}
-                      style={{ minWidth: 80, flexShrink: 0, textAlign: 'right' }}>
+                      style={{
+                        minWidth: 96,
+                        flexShrink: 0,
+                        textAlign: 'right',
+                        lineHeight: 20,
+                        paddingVertical: 2,
+                      }}>
                       {t('common.connected')}
                     </Text>
                   ) : (
                     <Text
                       className="text-md ml-2 text-gray-800"
                       numberOfLines={1}
-                      style={{ minWidth: 80, flexShrink: 0, textAlign: 'right' }}>
+                      style={{
+                        minWidth: 96,
+                        flexShrink: 0,
+                        textAlign: 'right',
+                        lineHeight: 20,
+                        paddingVertical: 2,
+                      }}>
                       {t('common.connect')}
                     </Text>
                   )}

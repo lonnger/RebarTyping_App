@@ -42,10 +42,14 @@ export enum GlobalConst {
 ///hans:简体中文
 ///hant:繁体中文
 ///en:英文
+///ar:阿拉伯语
+///es:西班牙语
 export enum LanguageType {
   hans = 0,
   hant = 1,
   en = 2,
+  ar = 3,
+  es = 4,
 }
 
 ///机器状态
